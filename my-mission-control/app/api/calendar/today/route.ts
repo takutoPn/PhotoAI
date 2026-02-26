@@ -12,7 +12,13 @@ const toDateString = (d: Date) =>
     day: "2-digit"
   }).format(d);
 
-export async function GET() {
+const plusDays = (base: Date, days: number) => {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   const accessToken = session?.accessToken;
 
@@ -20,10 +26,15 @@ export async function GET() {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const days = Math.max(1, Math.min(60, Number(searchParams.get("days") ?? 1)));
+
   const now = new Date();
-  const yyyyMmDd = toDateString(now); // 2026-02-26
-  const timeMin = `${yyyyMmDd}T00:00:00+09:00`;
-  const timeMax = `${yyyyMmDd}T23:59:59+09:00`;
+  const start = toDateString(now);
+  const end = toDateString(plusDays(now, days - 1));
+
+  const timeMin = `${start}T00:00:00+09:00`;
+  const timeMax = `${end}T23:59:59+09:00`;
 
   const url = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
   url.searchParams.set("singleEvents", "true");
@@ -48,7 +59,8 @@ export async function GET() {
     id: item.id,
     summary: item.summary ?? "(no title)",
     start: item.start?.dateTime ?? item.start?.date,
-    htmlLink: item.htmlLink
+    htmlLink: item.htmlLink,
+    allDay: Boolean(item.start?.date)
   }));
 
   return NextResponse.json({ items });

@@ -124,9 +124,50 @@ textarea {
   color: #ff8e8e;
 }
 
+.calendar-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.day-cell {
+  border: 1px solid #2b3553;
+  border-radius: 8px;
+  background: #0f1630;
+  min-height: 76px;
+  padding: 6px;
+}
+
+.day-head {
+  font-size: 0.8rem;
+  color: #9eabd0;
+  margin-bottom: 4px;
+}
+
+.event-chip {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 800px) {
   .kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-split {
+    grid-template-columns: 1fr;
+  }
+
+  .month-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   input {

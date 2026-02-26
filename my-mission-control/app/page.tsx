@@ -3,18 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 
-type Task = {
-  id: string;
-  text: string;
-  done: boolean;
-  createdAt: number;
-  doneAt?: number;
-  priority: "P1" | "P2" | "P3";
-};
+type Task = { id: string; text: string; done: boolean; createdAt: number; doneAt?: number; priority: "P1" | "P2" | "P3" };
 type Cycle = { id: string; label: string; minutes: number; createdAt: number };
 type FocusSession = { id: string; minutes: number; createdAt: number };
-type EventItem = { id: string; summary: string; start: string; htmlLink?: string };
-
+type EventItem = { id: string; summary: string; start: string; htmlLink?: string; allDay?: boolean };
 type UsageParsed = { tokens?: string; cost?: string; model?: string };
 
 const isToday = (ts: number) => {
@@ -23,6 +15,7 @@ const isToday = (ts: number) => {
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
 };
 
+const toYmd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const formatTime = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
 const formatEventTime = (iso: string) => new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
 
@@ -35,11 +28,9 @@ const parseUsage = (text: string): UsageParsed => {
 
 export default function Home() {
   const { data: session, status } = useSession();
-
   const [taskInput, setTaskInput] = useState("");
   const [priority, setPriority] = useState<"P1" | "P2" | "P3">("P2");
   const [tasks, setTasks] = useState<Task[]>([]);
-
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [running, setRunning] = useState(false);
@@ -47,20 +38,18 @@ export default function Home() {
   const [cycleLabel, setCycleLabel] = useState("");
   const [cycleMinutes, setCycleMinutes] = useState("");
   const [cycles, setCycles] = useState<Cycle[]>([]);
-
   const [channelName, setChannelName] = useState("#openclaw-missioncontrol");
   const [usageRaw, setUsageRaw] = useState("");
-
-  const [eventsToday, setEventsToday] = useState<EventItem[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [calendarError, setCalendarError] = useState("");
   const [loadingCalendar, setLoadingCalendar] = useState(false);
 
   useEffect(() => {
-    const t = localStorage.getItem("mmc.tasks.v4");
-    const fs = localStorage.getItem("mmc.focus.v4");
-    const c = localStorage.getItem("mmc.cycles.v4");
-    const ch = localStorage.getItem("mmc.channel.v4");
-    const ur = localStorage.getItem("mmc.usageRaw.v4");
+    const t = localStorage.getItem("mmc.tasks.v5");
+    const fs = localStorage.getItem("mmc.focus.v5");
+    const c = localStorage.getItem("mmc.cycles.v5");
+    const ch = localStorage.getItem("mmc.channel.v5");
+    const ur = localStorage.getItem("mmc.usageRaw.v5");
     if (t) setTasks(JSON.parse(t));
     if (fs) setFocusSessions(JSON.parse(fs));
     if (c) setCycles(JSON.parse(c));
@@ -68,11 +57,11 @@ export default function Home() {
     if (ur) setUsageRaw(ur);
   }, []);
 
-  useEffect(() => localStorage.setItem("mmc.tasks.v4", JSON.stringify(tasks)), [tasks]);
-  useEffect(() => localStorage.setItem("mmc.focus.v4", JSON.stringify(focusSessions)), [focusSessions]);
-  useEffect(() => localStorage.setItem("mmc.cycles.v4", JSON.stringify(cycles)), [cycles]);
-  useEffect(() => localStorage.setItem("mmc.channel.v4", channelName), [channelName]);
-  useEffect(() => localStorage.setItem("mmc.usageRaw.v4", usageRaw), [usageRaw]);
+  useEffect(() => localStorage.setItem("mmc.tasks.v5", JSON.stringify(tasks)), [tasks]);
+  useEffect(() => localStorage.setItem("mmc.focus.v5", JSON.stringify(focusSessions)), [focusSessions]);
+  useEffect(() => localStorage.setItem("mmc.cycles.v5", JSON.stringify(cycles)), [cycles]);
+  useEffect(() => localStorage.setItem("mmc.channel.v5", channelName), [channelName]);
+  useEffect(() => localStorage.setItem("mmc.usageRaw.v5", usageRaw), [usageRaw]);
 
   useEffect(() => {
     if (!running) return;
@@ -96,10 +85,7 @@ export default function Home() {
     setTasks((prev) => [{ id: crypto.randomUUID(), text, done: false, createdAt: Date.now(), priority }, ...prev]);
     setTaskInput("");
   };
-
-  const toggleDone = (id: string) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done, doneAt: t.done ? undefined : Date.now() } : t)));
-  };
+  const toggleDone = (id: string) => setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done, doneAt: t.done ? undefined : Date.now() } : t)));
 
   const addCycle = () => {
     const m = Number(cycleMinutes);
@@ -109,14 +95,14 @@ export default function Home() {
     setCycleMinutes("");
   };
 
-  const fetchTodayEvents = async () => {
+  const fetchCalendar = async () => {
     setLoadingCalendar(true);
     setCalendarError("");
     try {
-      const res = await fetch("/api/calendar/today", { cache: "no-store" });
+      const res = await fetch("/api/calendar/today?days=31", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setEventsToday(data.items ?? []);
+      setEvents(data.items ?? []);
     } catch (e) {
       setCalendarError(`取得失敗: ${e instanceof Error ? e.message : "unknown"}`);
     } finally {
@@ -134,36 +120,48 @@ export default function Home() {
   const usage = useMemo(() => parseUsage(usageRaw), [usageRaw]);
   const bottlenecks = [...cycles].sort((a, b) => b.minutes - a.minutes).slice(0, 3);
 
-  const slackSummary = useMemo(() => {
-    const topOpen = tasks
-      .filter((t) => !t.done)
-      .sort((a, b) => (a.priority < b.priority ? -1 : 1))
-      .slice(0, 3)
-      .map((t) => `- [${t.priority}] ${t.text}`)
-      .join("\n");
-    const topBottleneck = bottlenecks.map((b) => `- ${b.label}: ${b.minutes}分`).join("\n");
-    const todayEventsText = eventsToday.length ? eventsToday.map((e) => `- ${formatEventTime(e.start)} ${e.summary}`).join("\n") : "- 予定なし";
-    const usageText = usage.tokens || usage.cost ? `🧠 Token: *${usage.tokens ?? "-"}* / Cost: *${usage.cost ?? "-"}*` : "🧠 Token: 未入力";
+  const now = new Date();
+  const todayKey = toYmd(now);
+  const tomorrowDate = new Date(now);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowKey = toYmd(tomorrowDate);
 
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, EventItem[]>();
+    for (const e of events) {
+      const key = toYmd(new Date(e.start));
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+    return map;
+  }, [events]);
+
+  const todayEvents = eventsByDay.get(todayKey) ?? [];
+  const tomorrowEvents = eventsByDay.get(tomorrowKey) ?? [];
+
+  const monthDays = useMemo(() => {
+    return Array.from({ length: 31 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, []);
+
+  const slackSummary = useMemo(() => {
+    const topOpen = tasks.filter((t) => !t.done).sort((a, b) => (a.priority < b.priority ? -1 : 1)).slice(0, 3).map((t) => `- [${t.priority}] ${t.text}`).join("\n");
+    const topBottleneck = bottlenecks.map((b) => `- ${b.label}: ${b.minutes}分`).join("\n");
+    const todayEventsText = todayEvents.length ? todayEvents.map((e) => `- ${e.allDay ? "終日" : formatEventTime(e.start)} ${e.summary}`).join("\n") : "- 予定なし";
+    const usageText = usage.tokens || usage.cost ? `🧠 Token: *${usage.tokens ?? "-"}* / Cost: *${usage.cost ?? "-"}*` : "🧠 Token: 未入力";
     return `📡 *Mission Control Daily Brief*\nチャンネル: ${channelName}\n\n✅ 完了タスク: *${todayDone}件*\n⏱️ 集中時間: *${todayFocus}分*\n📉 平均サイクルタイム: *${avgCycle}分*\n${usageText}\n\n*今日の予定*\n${todayEventsText}\n\n*Next Actions*\n${topOpen || "- なし"}\n\n*Top Bottlenecks*\n${topBottleneck || "- 記録なし"}`;
-  }, [channelName, todayDone, todayFocus, avgCycle, usage.tokens, usage.cost, eventsToday, tasks, bottlenecks]);
+  }, [channelName, todayDone, todayFocus, avgCycle, usage.tokens, usage.cost, todayEvents, tasks, bottlenecks]);
 
   return (
     <main className="container">
-      <header>
-        <h1>My Mission Control</h1>
-        <p>Slack運用前提の個人ワークフロー・コックピット</p>
-      </header>
+      <header><h1>My Mission Control</h1><p>Slack運用前提の個人ワークフロー・コックピット</p></header>
 
       <section className="card row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <b>Google Calendar連携:</b> {status === "authenticated" ? `接続中 (${session?.user?.email})` : "未接続"}
-        </div>
-        {status === "authenticated" ? (
-          <button onClick={() => signOut()}>Google連携を解除</button>
-        ) : (
-          <button onClick={() => signIn("google")}>Googleでログイン</button>
-        )}
+        <div><b>Google Calendar連携:</b> {status === "authenticated" ? `接続中 (${session?.user?.email})` : "未接続"}</div>
+        {status === "authenticated" ? <button onClick={() => signOut()}>Google連携を解除</button> : <button onClick={() => signIn("google")}>Googleでログイン</button>}
       </section>
 
       <section className="kpi-grid">
@@ -174,13 +172,7 @@ export default function Home() {
 
       <section className="card">
         <h2>1) Priority Inbox</h2>
-        <div className="row">
-          <input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" />
-          <select value={priority} onChange={(e) => setPriority(e.target.value as "P1" | "P2" | "P3")}>
-            <option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option>
-          </select>
-          <button onClick={addTask}>追加</button>
-        </div>
+        <div className="row"><input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" /><select value={priority} onChange={(e) => setPriority(e.target.value as "P1" | "P2" | "P3")}><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option></select><button onClick={addTask}>追加</button></div>
         <ul>{tasks.map((t) => <li key={t.id}><label><input type="checkbox" checked={t.done} onChange={() => toggleDone(t.id)} /> <span className={t.done ? "done" : ""}>[{t.priority}] {t.text}</span></label></li>)}</ul>
       </section>
 
@@ -207,15 +199,37 @@ export default function Home() {
       </section>
 
       <section className="card">
-        <h2>追加2) Googleカレンダー 今日の予定（OAuth）</h2>
-        <div className="row"><button onClick={fetchTodayEvents} disabled={status !== "authenticated" || loadingCalendar}>{loadingCalendar ? "読込中..." : "今日の予定を取得"}</button></div>
+        <h2>追加2) Googleカレンダー（今日 / 明日 / 1ヶ月）</h2>
+        <div className="row"><button onClick={fetchCalendar} disabled={status !== "authenticated" || loadingCalendar}>{loadingCalendar ? "読込中..." : "予定を取得"}</button></div>
         {calendarError ? <p className="error">{calendarError}</p> : null}
-        <ul>
-          {eventsToday.map((e) => (
-            <li key={e.id}>{formatEventTime(e.start)} {e.summary} {e.htmlLink ? <a href={e.htmlLink} target="_blank">開く</a> : null}</li>
-          ))}
-          {!eventsToday.length && !calendarError ? <li>未取得 / 予定なし</li> : null}
-        </ul>
+
+        <div className="calendar-split">
+          <div>
+            <h3>今日の予定</h3>
+            <ul>{todayEvents.length ? todayEvents.map((e) => <li key={e.id}>{e.allDay ? "終日" : formatEventTime(e.start)} {e.summary}</li>) : <li>予定なし</li>}</ul>
+          </div>
+          <div>
+            <h3>明日の予定</h3>
+            <ul>{tomorrowEvents.length ? tomorrowEvents.map((e) => <li key={e.id}>{e.allDay ? "終日" : formatEventTime(e.start)} {e.summary}</li>) : <li>予定なし</li>}</ul>
+          </div>
+        </div>
+
+        <h3>1ヶ月カレンダー（31日）</h3>
+        <div className="month-grid">
+          {monthDays.map((d) => {
+            const key = toYmd(d);
+            const dayEvents = eventsByDay.get(key) ?? [];
+            return (
+              <div className="day-cell" key={key}>
+                <div className="day-head">{d.getMonth() + 1}/{d.getDate()}</div>
+                {dayEvents.slice(0, 2).map((e) => (
+                  <div className="event-chip" key={e.id}>● {e.summary}</div>
+                ))}
+                {dayEvents.length > 2 ? <div className="event-chip">+{dayEvents.length - 2}件</div> : null}
+              </div>
+            );
+          })}
+        </div>
       </section>
     </main>
   );
