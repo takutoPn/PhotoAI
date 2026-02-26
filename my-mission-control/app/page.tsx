@@ -45,6 +45,7 @@ export default function Home() {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [calendarError, setCalendarError] = useState("");
+  const [calendarWarning, setCalendarWarning] = useState("");
   const [loadingCalendar, setLoadingCalendar] = useState(false);
   const [monthCursor, setMonthCursor] = useState(() => {
     const d = new Date();
@@ -91,12 +92,16 @@ export default function Home() {
 
   const loadCalendars = async () => {
     setCalendarError("");
+    setCalendarWarning("");
     try {
       const res = await fetch("/api/calendar/calendars", { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.detail || `HTTP ${res.status}`);
+      }
       const cs: Cal[] = data.items ?? [];
       setCalendars(cs);
+      if (data.warning) setCalendarWarning(data.warning);
       if (!selectedCalendarIds.length) {
         const defaults = cs.filter((c) => c.primary).map((c) => c.id);
         setSelectedCalendarIds(defaults.length ? defaults : cs.slice(0, 1).map((c) => c.id));
@@ -222,6 +227,7 @@ export default function Home() {
         <h2>3) Calendar</h2>
         <div className="row"><button onClick={loadEvents} disabled={status !== "authenticated" || loadingCalendar}>{loadingCalendar ? "読込中..." : "予定を更新"}</button></div>
         {calendarError ? <p className="error">{calendarError}</p> : null}
+        {calendarWarning ? <p className="warn">{calendarWarning}</p> : null}
 
         <div className="calendar-picker">
           {calendars.map((c) => (

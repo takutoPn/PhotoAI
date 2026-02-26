@@ -18,7 +18,23 @@ export async function GET() {
   });
 
   if (!res.ok) {
-    return NextResponse.json({ error: "GOOGLE_API_ERROR", detail: await res.text() }, { status: res.status });
+    const detail = await res.text();
+    if (res.status === 403) {
+      // Fallback: some accounts return 403 for calendarList without extra consent.
+      // We can still operate with primary calendar.
+      return NextResponse.json({
+        items: [
+          {
+            id: "primary",
+            summary: "マイカレンダー (primary)",
+            primary: true,
+            backgroundColor: "#4285F4"
+          }
+        ],
+        warning: "calendarList へのアクセスが 403 のため primary のみ表示しています。"
+      });
+    }
+    return NextResponse.json({ error: "GOOGLE_API_ERROR", detail }, { status: res.status });
   }
 
   const data = await res.json();

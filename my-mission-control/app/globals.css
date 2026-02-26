@@ -124,6 +124,10 @@ textarea {
   color: #ff8e8e;
 }
 
+.warn {
+  color: #ffd37a;
+}
+
 .calendar-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
