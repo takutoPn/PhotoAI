@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 
-type Task = { id: string; text: string; done: boolean; createdAt: number; doneAt?: number; priority: "P1" | "P2" | "P3" };
+type Task = { id: string; text: string; done: boolean; createdAt: number; doneAt?: number; category: string; status: string };
 type Cycle = { id: string; label: string; minutes: number; createdAt: number };
 type FocusSession = { id: string; minutes: number; createdAt: number };
 type Cal = { id: string; summary: string; primary?: boolean };
@@ -46,8 +46,13 @@ export default function Home() {
   const { data: session, status } = useSession();
 
   const [taskInput, setTaskInput] = useState("");
-  const [priority, setPriority] = useState<"P1" | "P2" | "P3">("P2");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [categories, setCategories] = useState<string[]>(["P1", "P2", "P3"]);
+  const [selectedCategory, setSelectedCategory] = useState("P2");
+  const [newCategory, setNewCategory] = useState("");
+  const [statuses, setStatuses] = useState<string[]>(["未着手", "作業中", "確認中", "修正中", "作業済み"]);
+  const [selectedStatus, setSelectedStatus] = useState("未着手");
+  const [newStatus, setNewStatus] = useState("");
 
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -74,13 +79,15 @@ export default function Home() {
   });
 
   useEffect(() => {
-    const t = localStorage.getItem("mmc.tasks.v7");
+    const t = localStorage.getItem("mmc.tasks.v8");
     const fs = localStorage.getItem("mmc.focus.v7");
     const c = localStorage.getItem("mmc.cycles.v7");
     const ch = localStorage.getItem("mmc.channel.v7");
     const ur = localStorage.getItem("mmc.usageRaw.v7");
-    const selected = localStorage.getItem("mmc.selectedCalendars.v7");
-    const manual = localStorage.getItem("mmc.manualCalendars.v7");
+    const selected = localStorage.getItem("mmc.selectedCalendars.v8");
+    const manual = localStorage.getItem("mmc.manualCalendars.v8");
+    const ctg = localStorage.getItem("mmc.categories.v8");
+    const sts = localStorage.getItem("mmc.statuses.v8");
     if (t) setTasks(JSON.parse(t));
     if (fs) setFocusSessions(JSON.parse(fs));
     if (c) setCycles(JSON.parse(c));
@@ -88,15 +95,27 @@ export default function Home() {
     if (ur) setUsageRaw(ur);
     if (selected) setSelectedCalendarIds(JSON.parse(selected));
     if (manual) setManualCalendarIds(JSON.parse(manual));
+    if (ctg) {
+      const parsed = JSON.parse(ctg);
+      setCategories(parsed);
+      if (parsed[0]) setSelectedCategory(parsed[0]);
+    }
+    if (sts) {
+      const parsed = JSON.parse(sts);
+      setStatuses(parsed);
+      if (parsed[0]) setSelectedStatus(parsed[0]);
+    }
   }, []);
 
-  useEffect(() => localStorage.setItem("mmc.tasks.v7", JSON.stringify(tasks)), [tasks]);
-  useEffect(() => localStorage.setItem("mmc.focus.v7", JSON.stringify(focusSessions)), [focusSessions]);
-  useEffect(() => localStorage.setItem("mmc.cycles.v7", JSON.stringify(cycles)), [cycles]);
-  useEffect(() => localStorage.setItem("mmc.channel.v7", channelName), [channelName]);
-  useEffect(() => localStorage.setItem("mmc.usageRaw.v7", usageRaw), [usageRaw]);
-  useEffect(() => localStorage.setItem("mmc.selectedCalendars.v7", JSON.stringify(selectedCalendarIds)), [selectedCalendarIds]);
-  useEffect(() => localStorage.setItem("mmc.manualCalendars.v7", JSON.stringify(manualCalendarIds)), [manualCalendarIds]);
+  useEffect(() => localStorage.setItem("mmc.tasks.v8", JSON.stringify(tasks)), [tasks]);
+  useEffect(() => localStorage.setItem("mmc.focus.v8", JSON.stringify(focusSessions)), [focusSessions]);
+  useEffect(() => localStorage.setItem("mmc.cycles.v8", JSON.stringify(cycles)), [cycles]);
+  useEffect(() => localStorage.setItem("mmc.channel.v8", channelName), [channelName]);
+  useEffect(() => localStorage.setItem("mmc.usageRaw.v8", usageRaw), [usageRaw]);
+  useEffect(() => localStorage.setItem("mmc.selectedCalendars.v8", JSON.stringify(selectedCalendarIds)), [selectedCalendarIds]);
+  useEffect(() => localStorage.setItem("mmc.manualCalendars.v8", JSON.stringify(manualCalendarIds)), [manualCalendarIds]);
+  useEffect(() => localStorage.setItem("mmc.categories.v8", JSON.stringify(categories)), [categories]);
+  useEffect(() => localStorage.setItem("mmc.statuses.v8", JSON.stringify(statuses)), [statuses]);
 
   useEffect(() => {
     if (!running) return;
@@ -169,7 +188,7 @@ export default function Home() {
   const addTask = () => {
     const text = taskInput.trim();
     if (!text) return;
-    setTasks((prev) => [{ id: crypto.randomUUID(), text, done: false, createdAt: Date.now(), priority }, ...prev]);
+    setTasks((prev) => [{ id: crypto.randomUUID(), text, done: selectedStatus === "作業済み", createdAt: Date.now(), category: selectedCategory, status: selectedStatus }, ...prev]);
     setTaskInput("");
   };
 
@@ -178,6 +197,39 @@ export default function Home() {
     if (!id) return;
     setManualCalendarIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setManualInput("");
+  };
+
+  const addCategory = () => {
+    const v = newCategory.trim();
+    if (!v || categories.includes(v)) return;
+    setCategories((prev) => [...prev, v]);
+    setSelectedCategory(v);
+    setNewCategory("");
+  };
+
+  const removeCategory = (v: string) => {
+    if (categories.length <= 1) return;
+    setCategories((prev) => prev.filter((x) => x !== v));
+    setTasks((prev) => prev.map((t) => (t.category === v ? { ...t, category: categories.find((x) => x !== v) || "分類なし" } : t)));
+    if (selectedCategory === v) {
+      const next = categories.find((x) => x !== v);
+      if (next) setSelectedCategory(next);
+    }
+  };
+
+  const addStatus = () => {
+    const v = newStatus.trim();
+    if (!v || statuses.includes(v)) return;
+    setStatuses((prev) => [...prev, v]);
+    setSelectedStatus(v);
+    setNewStatus("");
+  };
+
+  const removeStatus = (v: string) => {
+    if (statuses.length <= 1) return;
+    setStatuses((prev) => prev.filter((x) => x !== v));
+    setTasks((prev) => prev.map((t) => (t.status === v ? { ...t, status: "未着手", done: false } : t)));
+    if (selectedStatus === v) setSelectedStatus("未着手");
   };
 
   const todayDone = tasks.filter((t) => t.doneAt && isToday(t.doneAt)).length;
@@ -211,7 +263,7 @@ export default function Home() {
   const bottlenecks = [...cycles].sort((a, b) => b.minutes - a.minutes).slice(0, 3);
 
   const slackSummary = useMemo(() => {
-    const topOpen = tasks.filter((t) => !t.done).sort((a, b) => (a.priority < b.priority ? -1 : 1)).slice(0, 3).map((t) => `- [${t.priority}] ${t.text}`).join("\n");
+    const topOpen = tasks.filter((t) => !t.done).slice(0, 3).map((t) => `- [${t.category} / ${t.status}] ${t.text}`).join("\n");
     const topBottleneck = bottlenecks.map((b) => `- ${b.label}: ${b.minutes}分`).join("\n");
     const todayText = todayEvents.length ? todayEvents.map((e) => `- ${formatClock(e.start, e.allDay)} ${e.summary}`).join("\n") : "- 予定なし";
     const usageText = usage.tokens || usage.cost ? `🧠 Token: *${usage.tokens ?? "-"}* / Cost: *${usage.cost ?? "-"}*` : "🧠 Token: 未入力";
@@ -237,9 +289,48 @@ export default function Home() {
             </section>
 
             <section className="card">
-              <h2>1) Priority Inbox</h2>
-              <div className="row"><input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" /><select value={priority} onChange={(e) => setPriority(e.target.value as "P1" | "P2" | "P3")}><option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option></select><button onClick={addTask}>追加</button></div>
-              <ul>{tasks.map((t) => <li key={t.id}><label><input type="checkbox" checked={t.done} onChange={() => setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, done: !x.done, doneAt: x.done ? undefined : Date.now() } : x)))} /> <span className={t.done ? "done" : ""}>[{t.priority}] {t.text}</span></label></li>)}</ul>
+              <h2>1) タスク</h2>
+              <div className="row">
+                <input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" />
+                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+                <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                <button onClick={addTask}>追加</button>
+              </div>
+
+              <div className="row" style={{ marginTop: 8 }}>
+                <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="分類を追加" />
+                <button onClick={addCategory}>分類追加</button>
+                <input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} placeholder="進捗を追加" />
+                <button onClick={addStatus}>進捗追加</button>
+              </div>
+
+              <div className="row" style={{ marginTop: 8 }}>
+                {categories.map((c) => <button key={c} onClick={() => removeCategory(c)}>分類削除: {c}</button>)}
+                {statuses.map((s) => <button key={s} onClick={() => removeStatus(s)}>進捗削除: {s}</button>)}
+              </div>
+
+              <ul>
+                {tasks.map((t) => (
+                  <li key={t.id}>
+                    <span className={t.done ? "done" : ""}>[{t.category}] {t.text}</span>
+                    <select
+                      value={t.status}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setTasks((prev) =>
+                          prev.map((x) =>
+                            x.id === t.id
+                              ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined }
+                              : x
+                          )
+                        );
+                      }}
+                    >
+                      {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </li>
+                ))}
+              </ul>
             </section>
 
             <section className="card">
