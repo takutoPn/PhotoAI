@@ -130,6 +130,34 @@ textarea {
   gap: 12px;
 }
 
+.calendar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.cal-check {
+  font-size: 0.9rem;
+}
+
+.month-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.month-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0;
+  color: #a8b4d2;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .month-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -140,12 +168,18 @@ textarea {
   border: 1px solid #2b3553;
   border-radius: 8px;
   background: #0f1630;
-  min-height: 76px;
+  min-height: 88px;
   padding: 6px;
 }
 
+.day-cell.muted {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.4;
+}
+
 .day-head {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #9eabd0;
   margin-bottom: 4px;
 }
@@ -164,6 +198,11 @@ textarea {
 
   .calendar-split {
     grid-template-columns: 1fr;
+  }
+
+  .month-weekdays {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    font-size: 0.75rem;
   }
 
   .month-grid {
