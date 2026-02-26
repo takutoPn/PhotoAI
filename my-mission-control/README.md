@@ -1,41 +1,39 @@
 # My Mission Control (Next.js)
 
 Slack運用前提の個人ミッションコントロール。
-対象チャンネル（例: `#openclaw-missioncontrol`）に投稿するための日次サマリーを、Web上で即生成できます。
 
-## 3つのワークフローツール
+## 主要機能
 
 1. **Priority Inbox**
-   - タスクをP1/P2/P3で即記録
-   - 完了チェックで進捗可視化
-
 2. **Focus Sprint + Bottleneck Radar**
-   - 15/25/45分の集中タイマー
-   - 工程時間を記録し、遅い工程Top3を抽出
-
 3. **Slack Daily Brief Composer**
-   - 今日のKPI（完了件数 / 集中分数 / 平均サイクル）を自動集計
-   - Slack投稿向けメッセージを生成してクリップボードにコピー
+4. **AI Token使用状況パネル**（`/status`貼り付け解析）
+5. **Google Calendar OAuth連携**（`calendar.readonly`、DB不要）
 
-## 追加パネル
-
-- **AI Token使用状況**
-  - OpenClawの`/status`出力を貼り付けると、Token/Cost/Modelを抽出表示
-
-- **Googleカレンダー今日の予定**
-  - 公開ICS URL（`.../public/basic.ics`）を入力して、今日の予定を抽出
-
-## 起動
+## セットアップ
 
 ```bash
 npm install
+copy .env.example .env.local
 npm run dev
 ```
 
-ブラウザで `http://localhost:3000` を開く。
+`http://localhost:3000` を開く。
+
+## Google OAuth設定（無料でOK）
+
+1. Google Cloud Consoleでプロジェクト作成
+2. **Google Calendar API** を有効化
+3. OAuth同意画面を作成（Externalで可）
+4. OAuth Client ID（Web application）を作成
+5. Authorized redirect URI に以下を追加:
+   - `http://localhost:3000/api/auth/callback/google`
+6. 発行されたID/Secretを `.env.local` に設定:
+   - `AUTH_GOOGLE_ID`
+   - `AUTH_GOOGLE_SECRET`
+7. `AUTH_SECRET` も設定（ランダム文字列）
 
 ## メモ
 
-- データは `localStorage` に保存されます。
-- Googleカレンダーは「公開」設定 + ICS URLが必要です。
-- まずは手動投稿運用（コピー&ペースト）で高速に回し、必要なら次段でSlack API自動投稿を追加できます。
+- 小規模の個人用途なら通常は無料運用で問題ありません。
+- スコープは最小限: `https://www.googleapis.com/auth/calendar.readonly`
