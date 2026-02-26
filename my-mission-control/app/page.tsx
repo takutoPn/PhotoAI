@@ -16,6 +16,19 @@ const formatClock = (iso: string, allDay?: boolean) => (allDay ? "終日" : new 
 const formatTime = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
 const isToday = (ts: number) => toYmd(new Date(ts)) === toYmd(new Date());
 
+const decodeGoogleCid = (value: string) => {
+  try {
+    const url = new URL(value);
+    const cid = url.searchParams.get("cid");
+    if (!cid) return value.trim();
+    const norm = cid.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = norm + "=".repeat((4 - (norm.length % 4)) % 4);
+    return atob(padded);
+  } catch {
+    return value.trim();
+  }
+};
+
 const parseUsage = (text: string): UsageParsed => {
   const tokens = text.match(/([\d,]+)\s*(tokens?|トークン)/i)?.[1];
   const cost = text.match(/\$\s*([\d.,]+)/)?.[1];
@@ -43,6 +56,8 @@ export default function Home() {
 
   const [calendars, setCalendars] = useState<Cal[]>([]);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
+  const [manualCalendarIds, setManualCalendarIds] = useState<string[]>([]);
+  const [manualInput, setManualInput] = useState("");
   const [events, setEvents] = useState<EventItem[]>([]);
   const [calendarError, setCalendarError] = useState("");
   const [calendarWarning, setCalendarWarning] = useState("");
@@ -59,12 +74,14 @@ export default function Home() {
     const ch = localStorage.getItem("mmc.channel.v6");
     const ur = localStorage.getItem("mmc.usageRaw.v6");
     const selected = localStorage.getItem("mmc.selectedCalendars.v6");
+    const manual = localStorage.getItem("mmc.manualCalendars.v6");
     if (t) setTasks(JSON.parse(t));
     if (fs) setFocusSessions(JSON.parse(fs));
     if (c) setCycles(JSON.parse(c));
     if (ch) setChannelName(ch);
     if (ur) setUsageRaw(ur);
     if (selected) setSelectedCalendarIds(JSON.parse(selected));
+    if (manual) setManualCalendarIds(JSON.parse(manual));
   }, []);
 
   useEffect(() => localStorage.setItem("mmc.tasks.v6", JSON.stringify(tasks)), [tasks]);
@@ -73,6 +90,7 @@ export default function Home() {
   useEffect(() => localStorage.setItem("mmc.channel.v6", channelName), [channelName]);
   useEffect(() => localStorage.setItem("mmc.usageRaw.v6", usageRaw), [usageRaw]);
   useEffect(() => localStorage.setItem("mmc.selectedCalendars.v6", JSON.stringify(selectedCalendarIds)), [selectedCalendarIds]);
+  useEffect(() => localStorage.setItem("mmc.manualCalendars.v6", JSON.stringify(manualCalendarIds)), [manualCalendarIds]);
 
   useEffect(() => {
     if (!running) return;
@@ -116,8 +134,10 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
+  const combinedCalendarIds = Array.from(new Set([...selectedCalendarIds, ...manualCalendarIds]));
+
   const loadEvents = async () => {
-    if (!selectedCalendarIds.length) return;
+    if (!combinedCalendarIds.length) return;
     setLoadingCalendar(true);
     setCalendarError("");
     try {
@@ -125,7 +145,7 @@ export default function Home() {
       const monthEnd = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
       const timeMin = `${toYmd(monthStart)}T00:00:00+09:00`;
       const timeMax = `${toYmd(monthEnd)}T23:59:59+09:00`;
-      const params = new URLSearchParams({ timeMin, timeMax, calendarIds: selectedCalendarIds.join(",") });
+      const params = new URLSearchParams({ timeMin, timeMax, calendarIds: combinedCalendarIds.join(",") });
       const res = await fetch(`/api/calendar/events?${params.toString()}`, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -138,12 +158,25 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (status === "authenticated" && selectedCalendarIds.length) loadEvents();
+    if (status === "authenticated" && combinedCalendarIds.length) loadEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, monthCursor, selectedCalendarIds.join(",")]);
+  }, [status, monthCursor, combinedCalendarIds.join(",")]);
 
   const toggleCalendar = (id: string) => {
     setSelectedCalendarIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const addManualCalendar = () => {
+    const raw = manualInput.trim();
+    if (!raw) return;
+    const id = decodeGoogleCid(raw);
+    if (!id) return;
+    setManualCalendarIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setManualInput("");
+  };
+
+  const removeManualCalendar = (id: string) => {
+    setManualCalendarIds((prev) => prev.filter((x) => x !== id));
   };
 
   const addTask = () => {
@@ -234,6 +267,20 @@ export default function Home() {
             <label key={c.id} className="cal-check"><input type="checkbox" checked={selectedCalendarIds.includes(c.id)} onChange={() => toggleCalendar(c.id)} /> {c.primary ? "⭐ " : ""}{c.summary}</label>
           ))}
         </div>
+
+        <div className="row">
+          <input value={manualInput} onChange={(e) => setManualInput(e.target.value)} placeholder="追加カレンダーID or GoogleカレンダーURL(?cid=...)" />
+          <button onClick={addManualCalendar}>ID追加</button>
+        </div>
+        {manualCalendarIds.length ? (
+          <ul>
+            {manualCalendarIds.map((id) => (
+              <li key={id}>
+                <code>{id}</code> <button onClick={() => removeManualCalendar(id)}>削除</button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <div className="calendar-split">
           <div><h3>今日の予定</h3><ul>{todayEvents.length ? todayEvents.map((e) => <li key={`${e.calendarId}-${e.id}`}>{formatClock(e.start, e.allDay)} {e.summary}</li>) : <li>予定なし</li>}</ul></div>
