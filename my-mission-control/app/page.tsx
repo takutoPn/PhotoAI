@@ -12,13 +12,55 @@ type Task = {
 };
 
 type Cycle = { id: string; label: string; minutes: number; createdAt: number };
-
 type FocusSession = { id: string; minutes: number; createdAt: number };
+type EventItem = { start: Date; summary: string };
+
+type UsageParsed = {
+  tokens?: string;
+  cost?: string;
+  model?: string;
+};
 
 const isToday = (ts: number) => {
   const d = new Date(ts);
   const n = new Date();
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+};
+
+const toYmd = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}${m}${day}`;
+};
+
+const parseIcsDate = (raw: string) => {
+  const v = raw.trim();
+  if (/^\d{8}T\d{6}Z$/.test(v)) {
+    const y = Number(v.slice(0, 4));
+    const m = Number(v.slice(4, 6)) - 1;
+    const d = Number(v.slice(6, 8));
+    const hh = Number(v.slice(9, 11));
+    const mm = Number(v.slice(11, 13));
+    const ss = Number(v.slice(13, 15));
+    return new Date(Date.UTC(y, m, d, hh, mm, ss));
+  }
+  if (/^\d{8}T\d{6}$/.test(v)) {
+    const y = Number(v.slice(0, 4));
+    const m = Number(v.slice(4, 6)) - 1;
+    const d = Number(v.slice(6, 8));
+    const hh = Number(v.slice(9, 11));
+    const mm = Number(v.slice(11, 13));
+    const ss = Number(v.slice(13, 15));
+    return new Date(y, m, d, hh, mm, ss);
+  }
+  if (/^\d{8}$/.test(v)) {
+    const y = Number(v.slice(0, 4));
+    const m = Number(v.slice(4, 6)) - 1;
+    const d = Number(v.slice(6, 8));
+    return new Date(y, m, d, 0, 0, 0);
+  }
+  return null;
 };
 
 const formatTime = (sec: number) => {
@@ -27,13 +69,29 @@ const formatTime = (sec: number) => {
   return `${m}:${s}`;
 };
 
+const formatEventTime = (d: Date) =>
+  d.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+const parseUsage = (text: string): UsageParsed => {
+  const tokens = text.match(/([\d,]+)\s*(tokens?|トークン)/i)?.[1];
+  const cost = text.match(/\$\s*([\d.,]+)/)?.[1];
+  const model = text.match(/model\s*[:=]\s*([^\n]+)/i)?.[1]?.trim();
+  return {
+    tokens,
+    cost: cost ? `$${cost}` : undefined,
+    model
+  };
+};
+
 export default function Home() {
-  // Tool 1: Priority Inbox
+  // Existing 3 tools
   const [taskInput, setTaskInput] = useState("");
   const [priority, setPriority] = useState<"P1" | "P2" | "P3">("P2");
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  // Tool 2: Focus Sprint + Cycle log
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [running, setRunning] = useState(false);
@@ -42,24 +100,39 @@ export default function Home() {
   const [cycleMinutes, setCycleMinutes] = useState("");
   const [cycles, setCycles] = useState<Cycle[]>([]);
 
-  // Tool 3: Slack Brief Composer
   const [channelName, setChannelName] = useState("#openclaw-missioncontrol");
 
+  // New 1: AI token usage panel
+  const [usageRaw, setUsageRaw] = useState("");
+
+  // New 2: Google Calendar URL panel
+  const [calendarUrl, setCalendarUrl] = useState("");
+  const [eventsToday, setEventsToday] = useState<EventItem[]>([]);
+  const [calendarError, setCalendarError] = useState("");
+  const [loadingCalendar, setLoadingCalendar] = useState(false);
+
   useEffect(() => {
-    const t = localStorage.getItem("mmc.tasks.v2");
-    const fs = localStorage.getItem("mmc.focus.v2");
-    const c = localStorage.getItem("mmc.cycles.v2");
-    const ch = localStorage.getItem("mmc.channel.v2");
+    const t = localStorage.getItem("mmc.tasks.v3");
+    const fs = localStorage.getItem("mmc.focus.v3");
+    const c = localStorage.getItem("mmc.cycles.v3");
+    const ch = localStorage.getItem("mmc.channel.v3");
+    const ur = localStorage.getItem("mmc.usageRaw.v3");
+    const cu = localStorage.getItem("mmc.calendarUrl.v3");
+
     if (t) setTasks(JSON.parse(t));
     if (fs) setFocusSessions(JSON.parse(fs));
     if (c) setCycles(JSON.parse(c));
     if (ch) setChannelName(ch);
+    if (ur) setUsageRaw(ur);
+    if (cu) setCalendarUrl(cu);
   }, []);
 
-  useEffect(() => localStorage.setItem("mmc.tasks.v2", JSON.stringify(tasks)), [tasks]);
-  useEffect(() => localStorage.setItem("mmc.focus.v2", JSON.stringify(focusSessions)), [focusSessions]);
-  useEffect(() => localStorage.setItem("mmc.cycles.v2", JSON.stringify(cycles)), [cycles]);
-  useEffect(() => localStorage.setItem("mmc.channel.v2", channelName), [channelName]);
+  useEffect(() => localStorage.setItem("mmc.tasks.v3", JSON.stringify(tasks)), [tasks]);
+  useEffect(() => localStorage.setItem("mmc.focus.v3", JSON.stringify(focusSessions)), [focusSessions]);
+  useEffect(() => localStorage.setItem("mmc.cycles.v3", JSON.stringify(cycles)), [cycles]);
+  useEffect(() => localStorage.setItem("mmc.channel.v3", channelName), [channelName]);
+  useEffect(() => localStorage.setItem("mmc.usageRaw.v3", usageRaw), [usageRaw]);
+  useEffect(() => localStorage.setItem("mmc.calendarUrl.v3", calendarUrl), [calendarUrl]);
 
   useEffect(() => {
     if (!running) return;
@@ -100,6 +173,58 @@ export default function Home() {
     setCycleMinutes("");
   };
 
+  const fetchTodayEvents = async () => {
+    if (!calendarUrl.trim()) return;
+    setLoadingCalendar(true);
+    setCalendarError("");
+    setEventsToday([]);
+
+    try {
+      const res = await fetch(calendarUrl.trim());
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+
+      const lines = text.replace(/\r\n /g, "").split(/\r?\n/);
+      const blocks: string[][] = [];
+      let current: string[] | null = null;
+
+      for (const line of lines) {
+        if (line === "BEGIN:VEVENT") current = [];
+        else if (line === "END:VEVENT" && current) {
+          blocks.push(current);
+          current = null;
+        } else if (current) current.push(line);
+      }
+
+      const today = toYmd(new Date());
+      const parsed: EventItem[] = [];
+
+      for (const block of blocks) {
+        const summaryLine = block.find((l) => l.startsWith("SUMMARY:"));
+        const dtLine = block.find((l) => l.startsWith("DTSTART"));
+        if (!summaryLine || !dtLine) continue;
+
+        const rawDate = dtLine.split(":").slice(1).join(":");
+        const start = parseIcsDate(rawDate);
+        if (!start) continue;
+
+        if (toYmd(start) === today) {
+          parsed.push({
+            start,
+            summary: summaryLine.replace("SUMMARY:", "")
+          });
+        }
+      }
+
+      parsed.sort((a, b) => a.start.getTime() - b.start.getTime());
+      setEventsToday(parsed);
+    } catch (e) {
+      setCalendarError(`読み込み失敗: ${e instanceof Error ? e.message : "unknown error"}`);
+    } finally {
+      setLoadingCalendar(false);
+    }
+  };
+
   const todayDone = tasks.filter((t) => t.doneAt && isToday(t.doneAt)).length;
   const todayFocus = focusSessions.filter((s) => isToday(s.createdAt)).reduce((sum, s) => sum + s.minutes, 0);
   const avgCycle = useMemo(() => {
@@ -107,6 +232,8 @@ export default function Home() {
     if (!todayCycles.length) return 0;
     return Math.round((todayCycles.reduce((sum, c) => sum + c.minutes, 0) / todayCycles.length) * 10) / 10;
   }, [cycles]);
+
+  const usage = useMemo(() => parseUsage(usageRaw), [usageRaw]);
 
   const bottlenecks = [...cycles].sort((a, b) => b.minutes - a.minutes).slice(0, 3);
 
@@ -120,8 +247,16 @@ export default function Home() {
 
     const topBottleneck = bottlenecks.map((b) => `- ${b.label}: ${b.minutes}分`).join("\n");
 
-    return `📡 *Mission Control Daily Brief*\nチャンネル: ${channelName}\n\n✅ 完了タスク: *${todayDone}件*\n⏱️ 集中時間: *${todayFocus}分*\n📉 平均サイクルタイム: *${avgCycle}分*\n\n*Next Actions*\n${topOpen || "- なし"}\n\n*Top Bottlenecks*\n${topBottleneck || "- 記録なし"}`;
-  }, [channelName, todayDone, todayFocus, avgCycle, tasks, bottlenecks]);
+    const todayEventsText = eventsToday.length
+      ? eventsToday.map((e) => `- ${formatEventTime(e.start)} ${e.summary}`).join("\n")
+      : "- 予定なし";
+
+    const usageText = usage.tokens || usage.cost
+      ? `🧠 Token: *${usage.tokens ?? "-"}* / Cost: *${usage.cost ?? "-"}*`
+      : "🧠 Token: 未入力";
+
+    return `📡 *Mission Control Daily Brief*\nチャンネル: ${channelName}\n\n✅ 完了タスク: *${todayDone}件*\n⏱️ 集中時間: *${todayFocus}分*\n📉 平均サイクルタイム: *${avgCycle}分*\n${usageText}\n\n*今日の予定*\n${todayEventsText}\n\n*Next Actions*\n${topOpen || "- なし"}\n\n*Top Bottlenecks*\n${topBottleneck || "- 記録なし"}`;
+  }, [channelName, todayDone, todayFocus, avgCycle, usage.tokens, usage.cost, eventsToday, tasks, bottlenecks]);
 
   const copySummary = async () => {
     await navigator.clipboard.writeText(slackSummary);
@@ -202,6 +337,42 @@ export default function Home() {
           <button onClick={copySummary}>サマリーをコピー</button>
         </div>
         <pre>{slackSummary}</pre>
+      </section>
+
+      <section className="card">
+        <h2>追加1) AI Token 使用状況</h2>
+        <p>OpenClawの`/status`出力を貼ると、トークンとコストを読み取り。</p>
+        <textarea
+          value={usageRaw}
+          onChange={(e) => setUsageRaw(e.target.value)}
+          placeholder="/status の出力をここに貼り付け"
+          rows={6}
+        />
+        <div className="row">
+          <span>Token: <b>{usage.tokens ?? "-"}</b></span>
+          <span>Cost: <b>{usage.cost ?? "-"}</b></span>
+          <span>Model: <b>{usage.model ?? "-"}</b></span>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2>追加2) Googleカレンダー今日の予定</h2>
+        <p>公開ICS URLを貼って「今日の予定」を抽出。</p>
+        <div className="row">
+          <input
+            value={calendarUrl}
+            onChange={(e) => setCalendarUrl(e.target.value)}
+            placeholder="https://calendar.google.com/calendar/ical/.../public/basic.ics"
+          />
+          <button onClick={fetchTodayEvents} disabled={loadingCalendar}>{loadingCalendar ? "読込中..." : "予定を取得"}</button>
+        </div>
+        {calendarError ? <p className="error">{calendarError}</p> : null}
+        <ul>
+          {eventsToday.map((e, i) => (
+            <li key={`${e.start.toISOString()}-${i}`}>{formatEventTime(e.start)} {e.summary}</li>
+          ))}
+          {!eventsToday.length && !calendarError ? <li>未取得 / 予定なし</li> : null}
+        </ul>
       </section>
     </main>
   );

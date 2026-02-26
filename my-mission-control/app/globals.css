@@ -110,6 +110,20 @@ pre {
   overflow-x: auto;
 }
 
+textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #3b4a71;
+  background: #0f1630;
+  color: #e8eefc;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.error {
+  color: #ff8e8e;
+}
+
 @media (max-width: 800px) {
   .kpi-grid {
     grid-template-columns: 1fr;
