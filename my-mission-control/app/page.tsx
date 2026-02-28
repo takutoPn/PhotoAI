@@ -261,11 +261,37 @@ export default function Home() {
       }
     };
 
-    fetchWeather();
-    const weatherTimer = setInterval(fetchWeather, 10 * 60 * 1000);
-    return () => {
-      clearInterval(weatherTimer);
+    const fetchBoth = async () => {
+      await fetchWeather();
+      await refreshLog();
     };
+
+    const msToNextSlot = () => {
+      const now = new Date();
+      const slots = [0, 6, 12, 18];
+      const next = new Date(now);
+      next.setMinutes(0, 0, 0);
+      const upcoming = slots.find((h) => h > now.getHours());
+      if (upcoming !== undefined) {
+        next.setHours(upcoming);
+      } else {
+        next.setDate(next.getDate() + 1);
+        next.setHours(0);
+      }
+      return Math.max(30_000, next.getTime() - now.getTime());
+    };
+
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        await fetchBoth();
+        schedule();
+      }, msToNextSlot());
+    };
+
+    fetchBoth();
+    schedule();
+    return () => clearTimeout(timer);
   }, []);
 
   const combinedCalendarIds = Array.from(new Set([...selectedCalendarIds, ...manualCalendarIds]));
@@ -671,7 +697,7 @@ export default function Home() {
                     <label>進捗状況</label>
                     <select value={quickStatus} onChange={(e) => setQuickStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
                   </div>
-                  <div className="row" style={{ justifyContent: "space-between" }}>
+                  <div className="row quick-actions" style={{ justifyContent: "space-between" }}>
                     <button onClick={() => {
                       setEditingId(null);
                       setEditorTitle(quickTitle);

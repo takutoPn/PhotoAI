@@ -265,6 +265,10 @@ header p {
   color: var(--muted);
 }
 
+.quick-actions {
+  margin-top: 15px;
+}
+
 .mini-chart {
   height: 120px;
   display: flex;
