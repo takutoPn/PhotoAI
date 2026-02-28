@@ -315,10 +315,17 @@ export default function Home() {
   const tomorrowEvents = eventsByDay.get(tomorrowKey) ?? [];
   const bottlenecks = [...cycles].sort((a, b) => b.minutes - a.minutes).slice(0, 3);
 
-  const inferredIntent = useMemo(() => {
-    const latest = tasks.find((t) => !t.done)?.text;
-    if (latest) return `${latest} を進めたい`;
-    return "でじるみAI対応を進めたい";
+  const inferredIntents = useMemo(() => {
+    const fromTasks = tasks.filter((t) => !t.done).slice(0, 5).map((t) => `${t.text} を進めたい`);
+    const defaults = [
+      "でじるみAI対応を進めたい",
+      "MissionControlのUI改善を進めたい",
+      "カレンダー連携の精度を上げたい",
+      "タスク運用を自動化したい",
+      "Slack要約を毎日回したい"
+    ];
+    const merged = [...fromTasks, ...defaults];
+    return Array.from(new Set(merged)).slice(0, 5);
   }, [tasks]);
 
   const slackSummary = useMemo(() => {
@@ -371,15 +378,19 @@ export default function Home() {
               </div>
               <aside>
                 <section className="card weather-widget">
-                  <h2>東京の天気</h2>
+                  <h2>ウィジェット1: 東京の天気</h2>
                   <p className="weather-main">{weather ? `${weather.weather} / ${weather.temp}°C` : "取得中..."}</p>
                   <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
                   <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
-                  <hr />
-                  <p>やりたそうなこと: <b>{inferredIntent}</b></p>
+                </section>
+                <section className="card intent-widget">
+                  <h2>ウィジェット2: やりたそうなこと</h2>
+                  <ul>
+                    {inferredIntents.map((line, i) => <li key={i}>{line}</li>)}
+                  </ul>
                 </section>
                 <section className="card log-widget">
-                  <h2>OpenClaw ログ</h2>
+                  <h2>ウィジェット3: OpenClaw ログ</h2>
                   <pre className="log-pre">{openclawLog}</pre>
                 </section>
               </aside>
