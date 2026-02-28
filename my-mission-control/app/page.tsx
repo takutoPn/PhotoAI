@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 
 type Task = { id: string; text: string; done: boolean; createdAt: number; doneAt?: number; category: string; status: string };
@@ -76,6 +77,8 @@ const NavIcon = ({ kind }: { kind: "dashboard" | "tasks" | "calendar" | "memory"
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
   const [activePage, setActivePage] = useState<"dashboard" | "tasks" | "calendar" | "memory" | "token">("dashboard");
 
   const [taskInput, setTaskInput] = useState("");
@@ -201,6 +204,29 @@ export default function Home() {
     } catch {
       setOpenclawLog("ログ取得失敗");
     }
+  };
+
+  useEffect(() => {
+    const map: Record<string, "dashboard" | "tasks" | "calendar" | "memory" | "token"> = {
+      "/": "dashboard",
+      "/task": "tasks",
+      "/calender": "calendar",
+      "/memory": "memory",
+      "/token": "token"
+    };
+    setActivePage(map[pathname] ?? "dashboard");
+  }, [pathname]);
+
+  const navigatePage = (p: "dashboard" | "tasks" | "calendar" | "memory" | "token") => {
+    const pathMap: Record<typeof p, string> = {
+      dashboard: "/",
+      tasks: "/task",
+      calendar: "/calender",
+      memory: "/memory",
+      token: "/token"
+    };
+    setActivePage(p);
+    router.push(pathMap[p]);
   };
 
   useEffect(() => {
@@ -353,11 +379,11 @@ export default function Home() {
       <aside className="sidebar">
         <h2>Mission</h2>
         <nav className="side-nav">
-          <button className={activePage === "dashboard" ? "active" : ""} onClick={() => setActivePage("dashboard")}><NavIcon kind="dashboard" />ダッシュボード</button>
-          <button className={activePage === "tasks" ? "active" : ""} onClick={() => setActivePage("tasks")}><NavIcon kind="tasks" />タスク</button>
-          <button className={activePage === "calendar" ? "active" : ""} onClick={() => setActivePage("calendar")}><NavIcon kind="calendar" />カレンダー</button>
-          <button className={activePage === "memory" ? "active" : ""} onClick={() => setActivePage("memory")}><NavIcon kind="memory" />メモリ</button>
-          <button className={activePage === "token" ? "active" : ""} onClick={() => setActivePage("token")}><NavIcon kind="token" />トークン</button>
+          <button className={activePage === "dashboard" ? "active" : ""} onClick={() => navigatePage("dashboard")}><NavIcon kind="dashboard" />ダッシュボード</button>
+          <button className={activePage === "tasks" ? "active" : ""} onClick={() => navigatePage("tasks")}><NavIcon kind="tasks" />タスク</button>
+          <button className={activePage === "calendar" ? "active" : ""} onClick={() => navigatePage("calendar")}><NavIcon kind="calendar" />カレンダー</button>
+          <button className={activePage === "memory" ? "active" : ""} onClick={() => navigatePage("memory")}><NavIcon kind="memory" />メモリ</button>
+          <button className={activePage === "token" ? "active" : ""} onClick={() => navigatePage("token")}><NavIcon kind="token" />トークン</button>
         </nav>
       </aside>
 
@@ -394,23 +420,6 @@ export default function Home() {
                   </ul>
                 </section>
               </div>
-              <aside>
-                <section className="card weather-widget">
-                  <h2>東京の天気</h2>
-                  <p className="weather-main weather-line">{weather ? <><WeatherIcon kind={weather.weatherIcon} /> {weather.weather} / {weather.temp}°C</> : "取得中..."}</p>
-                  <p>{weather ? `最低 ${weather.min}°C / 最高 ${weather.max}°C` : "気温レンジ取得中"}</p>
-                  <p className="muted">天気ソース: {weather?.source ?? "-"}</p>
-                  <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
-                  <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
-                </section>
-                <section className="card log-widget">
-                  <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                    <h2>OpenClaw ログ</h2>
-                    <button onClick={refreshLog}>更新</button>
-                  </div>
-                  <pre className="log-pre">{openclawLog}</pre>
-                </section>
-              </aside>
             </>
           ) : null}
 
@@ -455,12 +464,30 @@ export default function Home() {
           ) : null}
 
           {activePage === "memory" ? (
-            <aside><section className="card"><h2>メモリ（Slack Brief）</h2><div className="row"><input value={channelName} onChange={(e) => setChannelName(e.target.value)} placeholder="#openclaw-missioncontrol" /><button onClick={() => navigator.clipboard.writeText(slackSummary)}>サマリーをコピー</button></div><pre>{slackSummary}</pre></section></aside>
+            <div><section className="card"><h2>メモリ（Slack Brief）</h2><div className="row"><input value={channelName} onChange={(e) => setChannelName(e.target.value)} placeholder="#openclaw-missioncontrol" /><button onClick={() => navigator.clipboard.writeText(slackSummary)}>サマリーをコピー</button></div><pre>{slackSummary}</pre></section></div>
           ) : null}
 
           {activePage === "token" ? (
-            <aside><section className="card"><h2>トークン</h2><textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} /><div className="row"><span>Token: <b>{usage.tokens ?? "-"}</b></span><span>Cost: <b>{usage.cost ?? "-"}</b></span><span>Model: <b>{usage.model ?? "-"}</b></span></div></section></aside>
+            <div><section className="card"><h2>トークン</h2><textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} /><div className="row"><span>Token: <b>{usage.tokens ?? "-"}</b></span><span>Cost: <b>{usage.cost ?? "-"}</b></span><span>Model: <b>{usage.model ?? "-"}</b></span></div></section></div>
           ) : null}
+
+          <aside>
+            <section className="card weather-widget">
+              <h2>東京の天気</h2>
+              <p className="weather-main weather-line">{weather ? <><WeatherIcon kind={weather.weatherIcon} /> {weather.weather} / {weather.temp}°C</> : "取得中..."}</p>
+              <p>{weather ? `最低 ${weather.min}°C / 最高 ${weather.max}°C` : "気温レンジ取得中"}</p>
+              <p className="muted">天気ソース: {weather?.source ?? "-"}</p>
+              <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
+              <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
+            </section>
+            <section className="card log-widget">
+              <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                <h2>OpenClaw ログ</h2>
+                <button onClick={refreshLog}>更新</button>
+              </div>
+              <pre className="log-pre">{openclawLog}</pre>
+            </section>
+          </aside>
         </section>
       </main>
     </div>
