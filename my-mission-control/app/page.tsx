@@ -106,7 +106,6 @@ export default function Home() {
   const [quickEndDate, setQuickEndDate] = useState("");
   const [quickStatus, setQuickStatus] = useState("未着手");
   const [quickDescription, setQuickDescription] = useState("");
-  const [quickExpanded, setQuickExpanded] = useState(false);
 
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -667,17 +666,10 @@ export default function Home() {
                     <input
                       value={quickTitle}
                       onChange={(e) => setQuickTitle(e.target.value)}
-                      onFocus={() => setQuickExpanded(true)}
                       placeholder="タイトル"
                     />
-                    {quickExpanded ? (
-                      <>
-                        <label>進捗状況</label>
-                        <select value={quickStatus} onChange={(e) => setQuickStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                        <label>説明</label>
-                        <textarea value={quickDescription} onChange={(e) => setQuickDescription(e.target.value)} placeholder="説明" rows={4} />
-                      </>
-                    ) : null}
+                    <label>進捗状況</label>
+                    <select value={quickStatus} onChange={(e) => setQuickStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
                   </div>
                   <div className="row" style={{ justifyContent: "space-between" }}>
                     <button onClick={() => {
@@ -686,14 +678,14 @@ export default function Home() {
                       setEditorStartDate("");
                       setEditorEndDate("");
                       setEditorStatus(quickStatus);
-                      setEditorDescription(quickDescription);
+                      setEditorDescription("");
                       setEditorOpen(true);
                     }}>詳細</button>
                     <button onClick={() => {
                       const title = quickTitle.trim();
                       if (!title) return;
-                      setTasks((prev) => [{ id: crypto.randomUUID(), text: title, title, startDate: "", endDate: "", description: quickDescription, done: quickStatus === "作業済み", createdAt: Date.now(), doneAt: quickStatus === "作業済み" ? Date.now() : undefined, category: selectedCategory, status: quickStatus }, ...prev]);
-                      setQuickTitle(""); setQuickStatus("未着手"); setQuickDescription(""); setQuickExpanded(false);
+                      setTasks((prev) => [{ id: crypto.randomUUID(), text: title, title, startDate: "", endDate: "", description: "", done: quickStatus === "作業済み", createdAt: Date.now(), doneAt: quickStatus === "作業済み" ? Date.now() : undefined, category: selectedCategory, status: quickStatus }, ...prev]);
+                      setQuickTitle(""); setQuickStatus("未着手"); setQuickDescription("");
                     }}>確定</button>
                   </div>
                 </section>
