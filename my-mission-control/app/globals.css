@@ -98,6 +98,14 @@ body {
   display: grid;
   grid-template-columns: 8fr 2fr;
   gap: 16px;
+  align-items: start;
+}
+
+.content-grid > div,
+.content-grid > aside {
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+  padding-right: 4px;
 }
 
 header h1 {

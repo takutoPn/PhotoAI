@@ -106,6 +106,7 @@ export default function Home() {
   const [quickEndDate, setQuickEndDate] = useState("");
   const [quickStatus, setQuickStatus] = useState("未着手");
   const [quickDescription, setQuickDescription] = useState("");
+  const [quickExpanded, setQuickExpanded] = useState(false);
 
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -629,7 +630,7 @@ export default function Home() {
           ) : null}
 
           <aside>
-            {activePage === "tasks" && editorOpen ? (
+            {editorOpen ? (
               <section className="card">
                 <h2>{editingId ? "タスク編集" : "新規タスク登録"}</h2>
                 <div className="row"><input value={editorTitle} onChange={(e) => setEditorTitle(e.target.value)} placeholder="タイトル" /></div>
@@ -663,11 +664,20 @@ export default function Home() {
                   <h2>タスク追加</h2>
                   <div className="editor-stack">
                     <label>タイトル</label>
-                    <input value={quickTitle} onChange={(e) => setQuickTitle(e.target.value)} placeholder="タイトル" />
-                    <label>進捗状況</label>
-                    <select value={quickStatus} onChange={(e) => setQuickStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                    <label>説明</label>
-                    <textarea value={quickDescription} onChange={(e) => setQuickDescription(e.target.value)} placeholder="説明" rows={4} />
+                    <input
+                      value={quickTitle}
+                      onChange={(e) => setQuickTitle(e.target.value)}
+                      onFocus={() => setQuickExpanded(true)}
+                      placeholder="タイトル"
+                    />
+                    {quickExpanded ? (
+                      <>
+                        <label>進捗状況</label>
+                        <select value={quickStatus} onChange={(e) => setQuickStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                        <label>説明</label>
+                        <textarea value={quickDescription} onChange={(e) => setQuickDescription(e.target.value)} placeholder="説明" rows={4} />
+                      </>
+                    ) : null}
                   </div>
                   <div className="row" style={{ justifyContent: "space-between" }}>
                     <button onClick={() => {
@@ -683,7 +693,7 @@ export default function Home() {
                       const title = quickTitle.trim();
                       if (!title) return;
                       setTasks((prev) => [{ id: crypto.randomUUID(), text: title, title, startDate: "", endDate: "", description: quickDescription, done: quickStatus === "作業済み", createdAt: Date.now(), doneAt: quickStatus === "作業済み" ? Date.now() : undefined, category: selectedCategory, status: quickStatus }, ...prev]);
-                      setQuickTitle(""); setQuickStatus("未着手"); setQuickDescription("");
+                      setQuickTitle(""); setQuickStatus("未着手"); setQuickDescription(""); setQuickExpanded(false);
                     }}>確定</button>
                   </div>
                 </section>
