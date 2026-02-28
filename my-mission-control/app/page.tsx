@@ -42,6 +42,22 @@ const decodeGoogleCid = (input: string) => {
   }
 };
 
+const NavIcon = ({ kind }: { kind: "dashboard" | "tasks" | "calendar" | "memory" | "token" }) => {
+  const common = { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8 };
+  switch (kind) {
+    case "dashboard":
+      return <svg {...common}><rect x="3" y="3" width="8" height="8" /><rect x="13" y="3" width="8" height="5" /><rect x="13" y="10" width="8" height="11" /><rect x="3" y="13" width="8" height="8" /></svg>;
+    case "tasks":
+      return <svg {...common}><path d="M4 7h10" /><path d="M4 12h10" /><path d="M4 17h10" /><path d="M17 7l1.8 1.8L22 5.6" /></svg>;
+    case "calendar":
+      return <svg {...common}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M8 3v4M16 3v4M3 10h18" /></svg>;
+    case "memory":
+      return <svg {...common}><path d="M12 3a6 6 0 0 1 6 6c0 2-1 3.5-2.3 4.8-.9.9-1.2 1.6-1.2 2.7H9.5c0-1.1-.3-1.8-1.2-2.7C7 12.5 6 11 6 9a6 6 0 0 1 6-6Z" /><path d="M9.5 19h5M10 22h4" /></svg>;
+    case "token":
+      return <svg {...common}><ellipse cx="12" cy="12" rx="8" ry="5" /><path d="M4 12v3c0 2.8 3.6 5 8 5s8-2.2 8-5v-3" /></svg>;
+  }
+};
+
 export default function Home() {
   const { data: session, status } = useSession();
   const [activePage, setActivePage] = useState<"dashboard" | "tasks" | "calendar" | "memory" | "token">("dashboard");
@@ -276,11 +292,11 @@ export default function Home() {
       <aside className="sidebar">
         <h2>Mission</h2>
         <nav className="side-nav">
-          <button className={activePage === "dashboard" ? "active" : ""} onClick={() => setActivePage("dashboard")}><span>📊</span>ダッシュボード</button>
-          <button className={activePage === "tasks" ? "active" : ""} onClick={() => setActivePage("tasks")}><span>✅</span>タスク</button>
-          <button className={activePage === "calendar" ? "active" : ""} onClick={() => setActivePage("calendar")}><span>🗓️</span>カレンダー</button>
-          <button className={activePage === "memory" ? "active" : ""} onClick={() => setActivePage("memory")}><span>🧠</span>メモリ</button>
-          <button className={activePage === "token" ? "active" : ""} onClick={() => setActivePage("token")}><span>🪙</span>トークン</button>
+          <button className={activePage === "dashboard" ? "active" : ""} onClick={() => setActivePage("dashboard")}><NavIcon kind="dashboard" />ダッシュボード</button>
+          <button className={activePage === "tasks" ? "active" : ""} onClick={() => setActivePage("tasks")}><NavIcon kind="tasks" />タスク</button>
+          <button className={activePage === "calendar" ? "active" : ""} onClick={() => setActivePage("calendar")}><NavIcon kind="calendar" />カレンダー</button>
+          <button className={activePage === "memory" ? "active" : ""} onClick={() => setActivePage("memory")}><NavIcon kind="memory" />メモリ</button>
+          <button className={activePage === "token" ? "active" : ""} onClick={() => setActivePage("token")}><NavIcon kind="token" />トークン</button>
         </nav>
       </aside>
 
