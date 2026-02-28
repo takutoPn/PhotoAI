@@ -157,6 +157,35 @@ header p {
   margin-bottom: 8px;
 }
 
+.tasks-topbar-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.tasks-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mini-stat-action,
+.mini-stat-card {
+  margin-top: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.mini-stat-card h3 {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.mini-stat-card strong {
+  font-size: 1.1rem;
+}
+
 .task-filter-row {
   flex-wrap: nowrap;
 }
@@ -406,6 +435,10 @@ textarea {
   }
 
   .dashboard-main {
+    grid-template-columns: 1fr;
+  }
+
+  .tasks-topbar-grid {
     grid-template-columns: 1fr;
   }
 

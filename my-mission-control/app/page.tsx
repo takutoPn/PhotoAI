@@ -450,16 +450,17 @@ export default function Home() {
 
           {activePage === "tasks" ? (
             <div>
-              <section className="tasks-topbar">
-                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                  <h2 style={{ margin: 0 }}>タスク管理</h2>
-                  <button onClick={addTask}>＋新規タスク登録</button>
+              <section className="card tasks-topbar">
+                <div className="tasks-topbar-grid">
+                  <div className="tasks-title">タスク管理</div>
+                  <article className="card mini-stat-action">
+                    <button onClick={addTask}>＋新規タスク登録</button>
+                  </article>
+                  <article className="card mini-stat-card">
+                    <h3>総タスク</h3>
+                    <strong>{tasks.length}件</strong>
+                  </article>
                 </div>
-              </section>
-
-              <section className="tasks-status-grid">
-                {boardStatuses.map((s) => <article key={s} className="card"><h3>{s}</h3><strong>{tasks.filter((t) => t.status === s).length}件</strong></article>)}
-                <article className="card"><h3>総タスク</h3><strong>{tasks.length}件</strong></article>
               </section>
 
               <section className="card">
@@ -486,23 +487,31 @@ export default function Home() {
               </section>
 
               <section className="task-board-5col">
-                {boardStatuses.map((statusName) => (
-                  <div key={statusName} className="card task-col">
-                    <h3>{statusName}</h3>
-                    <div className="task-cards">
-                      {filteredTasks.filter((t) => t.status === statusName).map((t) => (
-                        <article key={t.id} className="task-mini-card">
-                          <b>[{t.category}]</b>
-                          <p>{t.text}</p>
-                          <select value={t.status} onChange={(e) => {
-                            const next = e.target.value;
-                            setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined } : x));
-                          }}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                        </article>
-                      ))}
+                {boardStatuses.map((statusName) => {
+                  const bucket = filteredTasks.filter((t) => {
+                    if (statusName === "未着手") {
+                      return t.status === "未着手" || !boardStatuses.includes(t.status);
+                    }
+                    return t.status === statusName;
+                  });
+                  return (
+                    <div key={statusName} className="card task-col">
+                      <h3>{statusName} <span className="muted">({bucket.length}件)</span></h3>
+                      <div className="task-cards">
+                        {bucket.map((t) => (
+                          <article key={t.id} className="task-mini-card">
+                            <b>[{t.category}]</b>
+                            <p>{t.text}</p>
+                            <select value={t.status} onChange={(e) => {
+                              const next = e.target.value;
+                              setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined } : x));
+                            }}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                          </article>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </section>
 
               <section className="card">
