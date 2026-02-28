@@ -217,6 +217,7 @@ header p {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 180px;
 }
 
 .task-mini-card {
@@ -228,6 +229,16 @@ header p {
 
 .task-mini-card p {
   margin: 6px 0;
+}
+
+.editor-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.editor-stack label {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .mini-chart {

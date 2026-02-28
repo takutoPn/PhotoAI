@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 
-type Task = { id: string; text: string; title?: string; dueDate?: string; description?: string; done: boolean; createdAt: number; doneAt?: number; category: string; status: string };
+type Task = { id: string; text: string; title?: string; startDate?: string; endDate?: string; description?: string; done: boolean; createdAt: number; doneAt?: number; category: string; status: string };
 type Cycle = { id: string; label: string; minutes: number; createdAt: number };
 type FocusSession = { id: string; minutes: number; createdAt: number };
 type Cal = { id: string; summary: string; primary?: boolean };
@@ -97,9 +97,15 @@ export default function Home() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editorTitle, setEditorTitle] = useState("");
-  const [editorDueDate, setEditorDueDate] = useState("");
+  const [editorStartDate, setEditorStartDate] = useState("");
+  const [editorEndDate, setEditorEndDate] = useState("");
   const [editorStatus, setEditorStatus] = useState("未着手");
   const [editorDescription, setEditorDescription] = useState("");
+  const [quickTitle, setQuickTitle] = useState("");
+  const [quickStartDate, setQuickStartDate] = useState("");
+  const [quickEndDate, setQuickEndDate] = useState("");
+  const [quickStatus, setQuickStatus] = useState("未着手");
+  const [quickDescription, setQuickDescription] = useState("");
 
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -139,7 +145,7 @@ export default function Home() {
     const sts = localStorage.getItem("mmc.statuses.v8");
     if (t) {
       const parsed = JSON.parse(t);
-      setTasks(parsed.map((x: any) => ({ ...x, title: x.title ?? x.text ?? "", text: x.text ?? x.title ?? "" })));
+      setTasks(parsed.map((x: any) => ({ ...x, title: x.title ?? x.text ?? "", text: x.text ?? x.title ?? "", startDate: x.startDate ?? "", endDate: x.endDate ?? x.dueDate ?? "" })));
     }
     if (fs) setFocusSessions(JSON.parse(fs));
     if (c) setCycles(JSON.parse(c));
@@ -293,7 +299,7 @@ export default function Home() {
   const addTask = () => {
     const text = taskInput.trim();
     if (!text) return;
-    setTasks((prev) => [{ id: crypto.randomUUID(), text, title: text, dueDate: "", description: "", done: selectedStatus === "作業済み", createdAt: Date.now(), category: selectedCategory, status: selectedStatus }, ...prev]);
+    setTasks((prev) => [{ id: crypto.randomUUID(), text, title: text, startDate: "", endDate: "", description: "", done: selectedStatus === "作業済み", createdAt: Date.now(), category: selectedCategory, status: selectedStatus }, ...prev]);
     setTaskInput("");
   };
 
@@ -307,7 +313,8 @@ export default function Home() {
   const openCreateEditor = (presetStatus = "未着手") => {
     setEditingId(null);
     setEditorTitle("");
-    setEditorDueDate("");
+    setEditorStartDate("");
+    setEditorEndDate("");
     setEditorStatus(presetStatus);
     setEditorDescription("");
     setEditorOpen(true);
@@ -316,7 +323,8 @@ export default function Home() {
   const openEditEditor = (task: Task) => {
     setEditingId(task.id);
     setEditorTitle(task.title ?? task.text);
-    setEditorDueDate(task.dueDate ?? "");
+    setEditorStartDate(task.startDate ?? "");
+    setEditorEndDate(task.endDate ?? "");
     setEditorStatus(task.status);
     setEditorDescription(task.description ?? "");
     setEditorOpen(true);
@@ -331,7 +339,8 @@ export default function Home() {
         ...t,
         text: title,
         title,
-        dueDate: editorDueDate,
+        startDate: editorStartDate,
+        endDate: editorEndDate,
         status: editorStatus,
         description: editorDescription,
         done: editorStatus === "作業済み",
@@ -342,7 +351,8 @@ export default function Home() {
         id: crypto.randomUUID(),
         text: title,
         title,
-        dueDate: editorDueDate,
+        startDate: editorStartDate,
+        endDate: editorEndDate,
         description: editorDescription,
         done: editorStatus === "作業済み",
         createdAt: Date.now(),
@@ -568,7 +578,7 @@ export default function Home() {
                     return t.status === statusName;
                   });
                   return (
-                    <div key={statusName} className="card task-col">
+                    <div key={statusName} className="card task-col" onDoubleClick={() => openCreateEditor(statusName)}>
                       <h3>{statusName} <span className="muted">{bucket.length}件</span></h3>
                       <div className="task-cards" onDoubleClick={() => openCreateEditor(statusName)}>
                         {bucket.map((t) => (
@@ -623,9 +633,16 @@ export default function Home() {
               <section className="card">
                 <h2>{editingId ? "タスク編集" : "新規タスク登録"}</h2>
                 <div className="row"><input value={editorTitle} onChange={(e) => setEditorTitle(e.target.value)} placeholder="タイトル" /></div>
-                <div className="row"><input type="date" value={editorDueDate} onChange={(e) => setEditorDueDate(e.target.value)} /></div>
-                <div className="row"><select value={editorStatus} onChange={(e) => setEditorStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
-                <textarea value={editorDescription} onChange={(e) => setEditorDescription(e.target.value)} placeholder="説明" rows={6} />
+                <div className="editor-stack">
+                  <label>開始日</label>
+                  <input type="date" value={editorStartDate} onChange={(e) => setEditorStartDate(e.target.value)} />
+                  <label>終了日</label>
+                  <input type="date" value={editorEndDate} onChange={(e) => setEditorEndDate(e.target.value)} />
+                  <label>進捗状況</label>
+                  <select value={editorStatus} onChange={(e) => setEditorStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                  <label>説明</label>
+                  <textarea value={editorDescription} onChange={(e) => setEditorDescription(e.target.value)} placeholder="説明" rows={6} />
+                </div>
                 <div className="row" style={{ justifyContent: "space-between" }}>
                   <button onClick={cancelEditor}>キャンセル</button>
                   <button onClick={saveEditor}>確定</button>
@@ -641,6 +658,30 @@ export default function Home() {
                   <p className="muted">天気ソース: {weather?.source ?? "-"}</p>
                   <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
                   <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
+                </section>
+                <section className="card">
+                  <h2>タスク追加</h2>
+                  <div className="editor-stack">
+                    <label>タイトル</label>
+                    <input value={quickTitle} onChange={(e) => setQuickTitle(e.target.value)} placeholder="タイトル" />
+                    <label>開始日</label>
+                    <input type="date" value={quickStartDate} onChange={(e) => setQuickStartDate(e.target.value)} />
+                    <label>終了日</label>
+                    <input type="date" value={quickEndDate} onChange={(e) => setQuickEndDate(e.target.value)} />
+                    <label>進捗状況</label>
+                    <select value={quickStatus} onChange={(e) => setQuickStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                    <label>説明</label>
+                    <textarea value={quickDescription} onChange={(e) => setQuickDescription(e.target.value)} placeholder="説明" rows={4} />
+                  </div>
+                  <div className="row" style={{ justifyContent: "space-between" }}>
+                    <button onClick={() => { setQuickTitle(""); setQuickStartDate(""); setQuickEndDate(""); setQuickStatus("未着手"); setQuickDescription(""); }}>キャンセル</button>
+                    <button onClick={() => {
+                      const title = quickTitle.trim();
+                      if (!title) return;
+                      setTasks((prev) => [{ id: crypto.randomUUID(), text: title, title, startDate: quickStartDate, endDate: quickEndDate, description: quickDescription, done: quickStatus === "作業済み", createdAt: Date.now(), doneAt: quickStatus === "作業済み" ? Date.now() : undefined, category: selectedCategory, status: quickStatus }, ...prev]);
+                      setQuickTitle(""); setQuickStartDate(""); setQuickEndDate(""); setQuickStatus("未着手"); setQuickDescription("");
+                    }}>確定</button>
+                  </div>
                 </section>
                 <section className="card log-widget">
                   <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
