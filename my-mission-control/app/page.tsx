@@ -89,6 +89,9 @@ export default function Home() {
   const [statuses, setStatuses] = useState<string[]>(["未着手", "作業中", "確認中", "修正中", "作業済み"]);
   const [selectedStatus, setSelectedStatus] = useState("未着手");
   const [newStatus, setNewStatus] = useState("");
+  const [taskSearch, setTaskSearch] = useState("");
+  const [searchStatus, setSearchStatus] = useState("all");
+  const [searchPeriod, setSearchPeriod] = useState("all");
 
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -366,6 +369,20 @@ export default function Home() {
     return Array.from(new Set(merged)).slice(0, 5);
   }, [tasks]);
 
+  const boardStatuses = ["未着手", "作業中", "確認中", "修正中", "作業済み"];
+
+  const filteredTasks = useMemo(() => {
+    const now = Date.now();
+    return tasks.filter((t) => {
+      if (taskSearch && !t.text.includes(taskSearch)) return false;
+      if (searchStatus !== "all" && t.status !== searchStatus) return false;
+      if (searchPeriod === "today" && !isToday(t.createdAt)) return false;
+      if (searchPeriod === "7d" && now - t.createdAt > 7 * 24 * 60 * 60 * 1000) return false;
+      if (searchPeriod === "30d" && now - t.createdAt > 30 * 24 * 60 * 60 * 1000) return false;
+      return true;
+    });
+  }, [tasks, taskSearch, searchStatus, searchPeriod]);
+
   const slackSummary = useMemo(() => {
     const topOpen = tasks.filter((t) => !t.done).slice(0, 3).map((t) => `- [${t.category} / ${t.status}] ${t.text}`).join("\n");
     const topBottleneck = bottlenecks.map((b) => `- ${b.label}: ${b.minutes}分`).join("\n");
@@ -425,42 +442,62 @@ export default function Home() {
 
           {activePage === "tasks" ? (
             <div>
-              <section className="tasks-summary-grid">
-                <article className="card"><h3>総タスク</h3><strong>{tasks.length}件</strong></article>
-                <article className="card"><h3>進行中</h3><strong>{tasks.filter((t) => t.status === "作業中").length}件</strong></article>
-                <article className="card"><h3>確認待ち</h3><strong>{tasks.filter((t) => t.status === "確認中").length}件</strong></article>
-                <article className="card"><h3>作業済み</h3><strong>{tasks.filter((t) => t.done).length}件</strong></article>
-              </section>
-
-              <section className="tasks-two-col">
-                <div className="card">
-                  <h2>タスク入力</h2>
-                  <div className="row"><input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" /><select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select><select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select><button onClick={addTask}>追加</button></div>
-                  <div className="row" style={{ marginTop: 8 }}><input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="分類を追加" /><button onClick={addCategory}>分類追加</button><input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} placeholder="進捗を追加" /><button onClick={addStatus}>進捗追加</button></div>
-                </div>
-
-                <div className="card">
-                  <h2>進捗ボード</h2>
-                  <div className="status-chip-grid">
-                    {statuses.map((s) => <div key={s} className="status-chip"><span>{s}</span><b>{tasks.filter((t) => t.status === s).length}</b></div>)}
+              <section className="card tasks-topbar">
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <div className="row">
+                    <button>タスク管理</button>
+                    <button>履歴</button>
                   </div>
-                  <div className="row" style={{ marginTop: 10 }}>{categories.map((c) => <button key={c} onClick={() => removeCategory(c)}>分類削除: {c}</button>)}{statuses.map((s) => <button key={s} onClick={() => removeStatus(s)}>進捗削除: {s}</button>)}</div>
+                  <button onClick={addTask}>＋新規タスク登録</button>
                 </div>
               </section>
 
-              <section className="card">
-                <h2>タスク一覧</h2>
-                <ul>{tasks.map((t) => <li key={t.id}><span className={t.done ? "done" : ""}>[{t.category}] {t.text}</span><select value={t.status} onChange={(e) => { const next = e.target.value; setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined } : x)); }}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select></li>)}</ul>
+              <section className="tasks-status-grid">
+                {boardStatuses.map((s) => <article key={s} className="card"><h3>{s}</h3><strong>{tasks.filter((t) => t.status === s).length}件</strong></article>)}
+                <article className="card"><h3>総タスク</h3><strong>{tasks.length}件</strong></article>
               </section>
 
               <section className="card">
-                <h2>Focus Sprint + Bottleneck Radar</h2>
-                <div className="row">{[15, 25, 45].map((m) => <button key={m} onClick={() => { setDurationMin(m); setTimeLeft(m * 60); setRunning(false); }}>{m}分</button>)}</div>
-                <div className="timer">{formatTime(timeLeft)}</div>
-                <div className="row"><button onClick={() => setRunning(true)}>開始</button><button onClick={() => setRunning(false)}>停止</button><button onClick={() => { setRunning(false); setTimeLeft(durationMin * 60); }}>リセット</button></div>
-                <hr />
-                <div className="row"><input value={cycleLabel} onChange={(e) => setCycleLabel(e.target.value)} placeholder="工程名" /><input type="number" value={cycleMinutes} onChange={(e) => setCycleMinutes(e.target.value)} placeholder="分" min={1} /><button onClick={() => { const m = Number(cycleMinutes); if (!cycleLabel.trim() || !m || m <= 0) return; setCycles((prev) => [{ id: crypto.randomUUID(), label: cycleLabel.trim(), minutes: m, createdAt: Date.now() }, ...prev]); setCycleLabel(""); setCycleMinutes(""); }}>記録</button></div>
-                <p>平均サイクル: <b>{avgCycle}分</b></p>
+                <div className="row">
+                  <input value={taskSearch} onChange={(e) => setTaskSearch(e.target.value)} placeholder="検索バー" />
+                  <select value={searchStatus} onChange={(e) => setSearchStatus(e.target.value)}>
+                    <option value="all">検索オプション1: 進捗状況(すべて)</option>
+                    {boardStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <select value={searchPeriod} onChange={(e) => setSearchPeriod(e.target.value)}>
+                    <option value="all">検索オプション2: 選択期間(すべて)</option>
+                    <option value="today">今日</option>
+                    <option value="7d">7日</option>
+                    <option value="30d">30日</option>
+                  </select>
+                </div>
+              </section>
+
+              <section className="task-board-5col">
+                {boardStatuses.map((statusName) => (
+                  <div key={statusName} className="card task-col">
+                    <h3>{statusName}</h3>
+                    <div className="task-cards">
+                      {filteredTasks.filter((t) => t.status === statusName).map((t) => (
+                        <article key={t.id} className="task-mini-card">
+                          <b>[{t.category}]</b>
+                          <p>{t.text}</p>
+                          <select value={t.status} onChange={(e) => {
+                            const next = e.target.value;
+                            setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined } : x));
+                          }}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+
+              <section className="card">
+                <h2>タスク設定</h2>
+                <div className="row"><input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" /><select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select><select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select><button onClick={addTask}>追加</button></div>
+                <div className="row" style={{ marginTop: 8 }}><input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="分類を追加" /><button onClick={addCategory}>分類追加</button><input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} placeholder="進捗を追加" /><button onClick={addStatus}>進捗追加</button></div>
+                <div className="row" style={{ marginTop: 8 }}>{categories.map((c) => <button key={c} onClick={() => removeCategory(c)}>分類削除: {c}</button>)}{statuses.map((s) => <button key={s} onClick={() => removeStatus(s)}>進捗削除: {s}</button>)}</div>
               </section>
             </div>
           ) : null}
