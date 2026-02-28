@@ -111,7 +111,7 @@ export default function Home() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [weather, setWeather] = useState<Weather | null>(null);
-  const [openclawLog, setOpenclawLog] = useState("ログ読込中...");
+  const [openclawLog, setOpenclawLog] = useState("ログは手動更新にしています");
 
   useEffect(() => {
     const t = localStorage.getItem("mmc.tasks.v8");
@@ -192,6 +192,17 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
+  const refreshLog = async () => {
+    try {
+      const res = await fetch("/api/openclaw/logs", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setOpenclawLog(data.text ?? "ログなし");
+    } catch {
+      setOpenclawLog("ログ取得失敗");
+    }
+  };
+
   useEffect(() => {
     const fetchWeather = async () => {
       try {
@@ -204,23 +215,9 @@ export default function Home() {
       }
     };
 
-    const fetchLog = async () => {
-      try {
-        const res = await fetch("/api/openclaw/logs", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
-        setOpenclawLog(data.text ?? "ログなし");
-      } catch {
-        setOpenclawLog("ログ取得失敗");
-      }
-    };
-
     fetchWeather();
-    fetchLog();
-    const logTimer = setInterval(fetchLog, 15000);
     const weatherTimer = setInterval(fetchWeather, 10 * 60 * 1000);
     return () => {
-      clearInterval(logTimer);
       clearInterval(weatherTimer);
     };
   }, []);
@@ -407,7 +404,10 @@ export default function Home() {
                   <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
                 </section>
                 <section className="card log-widget">
-                  <h2>OpenClaw ログ</h2>
+                  <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                    <h2>OpenClaw ログ</h2>
+                    <button onClick={refreshLog}>更新</button>
+                  </div>
                   <pre className="log-pre">{openclawLog}</pre>
                 </section>
               </aside>
