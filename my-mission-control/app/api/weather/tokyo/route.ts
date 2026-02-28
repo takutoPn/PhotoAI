@@ -3,20 +3,23 @@ import { NextResponse } from "next/server";
 const clothesSuggestion = (minC: number, maxC: number, rainMm: number) => {
   const rainText = rainMm >= 1 ? "雨具: 傘必須" : rainMm > 0 ? "雨具: 折りたたみ傘推奨" : "雨具: なくてOK";
 
-  let cloth = "服装: 上着あり / 長袖";
-  if (maxC <= 12) {
-    cloth = "服装: コート必須 / 厚着";
-  } else if (minC >= 10 && maxC <= 20) {
-    cloth = "服装: コートなし / 厚着";
-  } else if (minC >= 15 && maxC <= 25) {
-    cloth = "服装: 上着あり / 長袖";
-  } else if (minC >= 20 && maxC <= 30) {
-    cloth = "服装: 上着あり / 半袖";
-  } else if (minC >= 25) {
-    cloth = "服装: 半袖";
-  }
+  const patterns = [
+    { key: "パターン1", min: -5, max: 12, cloth: "コート必須 / 厚着" },
+    { key: "パターン2", min: 10, max: 20, cloth: "コートなし / 厚着" },
+    { key: "パターン3", min: 15, max: 25, cloth: "上着あり / 長袖" },
+    { key: "パターン4", min: 20, max: 30, cloth: "上着あり / 半袖" },
+    { key: "パターン5", min: 25, max: 45, cloth: "半袖" }
+  ];
 
-  return { cloth, rainText };
+  const exact = patterns.find((p) => minC >= p.min && maxC <= p.max);
+  const pick = exact ?? [...patterns]
+    .map((p) => ({
+      ...p,
+      score: Math.abs(((minC + maxC) / 2) - ((p.min + p.max) / 2))
+    }))
+    .sort((a, b) => a.score - b.score)[0];
+
+  return { cloth: `服装: ${pick.cloth} (${pick.key})`, rainText };
 };
 
 export async function GET() {
@@ -79,6 +82,7 @@ export async function GET() {
 
     return NextResponse.json({
       city: "東京",
+      source: "Open-Meteo",
       temp,
       min,
       max,

@@ -9,7 +9,7 @@ type FocusSession = { id: string; minutes: number; createdAt: number };
 type Cal = { id: string; summary: string; primary?: boolean };
 type EventItem = { id: string; summary: string; start: string; htmlLink?: string; allDay?: boolean; calendarId: string };
 type UsageParsed = { tokens?: string; cost?: string; model?: string };
-type Weather = { city: string; temp: number; min: number; max: number; weather: string; weatherIcon: string; cloth: string; rainText: string };
+type Weather = { city: string; source?: string; temp: number; min: number; max: number; weather: string; weatherIcon: string; cloth: string; rainText: string };
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 const toYmd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -402,6 +402,7 @@ export default function Home() {
                   <h2>東京の天気</h2>
                   <p className="weather-main weather-line">{weather ? <><WeatherIcon kind={weather.weatherIcon} /> {weather.weather} / {weather.temp}°C</> : "取得中..."}</p>
                   <p>{weather ? `最低 ${weather.min}°C / 最高 ${weather.max}°C` : "気温レンジ取得中"}</p>
+                  <p className="muted">天気ソース: {weather?.source ?? "-"}</p>
                   <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
                   <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
                 </section>
