@@ -664,22 +664,26 @@ export default function Home() {
                   <div className="editor-stack">
                     <label>タイトル</label>
                     <input value={quickTitle} onChange={(e) => setQuickTitle(e.target.value)} placeholder="タイトル" />
-                    <label>開始日</label>
-                    <input type="date" value={quickStartDate} onChange={(e) => setQuickStartDate(e.target.value)} />
-                    <label>終了日</label>
-                    <input type="date" value={quickEndDate} onChange={(e) => setQuickEndDate(e.target.value)} />
                     <label>進捗状況</label>
                     <select value={quickStatus} onChange={(e) => setQuickStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
                     <label>説明</label>
                     <textarea value={quickDescription} onChange={(e) => setQuickDescription(e.target.value)} placeholder="説明" rows={4} />
                   </div>
                   <div className="row" style={{ justifyContent: "space-between" }}>
-                    <button onClick={() => { setQuickTitle(""); setQuickStartDate(""); setQuickEndDate(""); setQuickStatus("未着手"); setQuickDescription(""); }}>キャンセル</button>
+                    <button onClick={() => {
+                      setEditingId(null);
+                      setEditorTitle(quickTitle);
+                      setEditorStartDate("");
+                      setEditorEndDate("");
+                      setEditorStatus(quickStatus);
+                      setEditorDescription(quickDescription);
+                      setEditorOpen(true);
+                    }}>詳細</button>
                     <button onClick={() => {
                       const title = quickTitle.trim();
                       if (!title) return;
-                      setTasks((prev) => [{ id: crypto.randomUUID(), text: title, title, startDate: quickStartDate, endDate: quickEndDate, description: quickDescription, done: quickStatus === "作業済み", createdAt: Date.now(), doneAt: quickStatus === "作業済み" ? Date.now() : undefined, category: selectedCategory, status: quickStatus }, ...prev]);
-                      setQuickTitle(""); setQuickStartDate(""); setQuickEndDate(""); setQuickStatus("未着手"); setQuickDescription("");
+                      setTasks((prev) => [{ id: crypto.randomUUID(), text: title, title, startDate: "", endDate: "", description: quickDescription, done: quickStatus === "作業済み", createdAt: Date.now(), doneAt: quickStatus === "作業済み" ? Date.now() : undefined, category: selectedCategory, status: quickStatus }, ...prev]);
+                      setQuickTitle(""); setQuickStatus("未着手"); setQuickDescription("");
                     }}>確定</button>
                   </div>
                 </section>
