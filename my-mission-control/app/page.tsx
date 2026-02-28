@@ -350,7 +350,7 @@ export default function Home() {
       </aside>
 
       <main className="container">
-        <header><h1>My Mission Control</h1><p>Slack運用前提の個人ワークフロー・コックピット</p></header>
+        <header><h1>My Mission Control</h1></header>
 
         <section className="content-grid">
           {activePage === "dashboard" ? (
@@ -367,6 +367,13 @@ export default function Home() {
                     <h2>Today Focus</h2>
                     <p>未完了タスク: <b>{tasks.filter((t) => !t.done).length}件</b></p>
                     <p>次アクション: <b>{tasks.find((t) => !t.done)?.text ?? "なし"}</b></p>
+
+                    <div className="intent-box">
+                      <h3>やりたそうなこと</h3>
+                      <ul>
+                        {inferredIntents.map((line, i) => <li key={i}>{line}</li>)}
+                      </ul>
+                    </div>
                   </div>
                   <div className="mini-chart">
                     {Array.from({ length: 14 }).map((_, i) => {
@@ -378,19 +385,13 @@ export default function Home() {
               </div>
               <aside>
                 <section className="card weather-widget">
-                  <h2>ウィジェット1: 東京の天気</h2>
+                  <h2>東京の天気</h2>
                   <p className="weather-main">{weather ? `${weather.weather} / ${weather.temp}°C` : "取得中..."}</p>
                   <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
                   <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
                 </section>
-                <section className="card intent-widget">
-                  <h2>ウィジェット2: やりたそうなこと</h2>
-                  <ul>
-                    {inferredIntents.map((line, i) => <li key={i}>{line}</li>)}
-                  </ul>
-                </section>
                 <section className="card log-widget">
-                  <h2>ウィジェット3: OpenClaw ログ</h2>
+                  <h2>OpenClaw ログ</h2>
                   <pre className="log-pre">{openclawLog}</pre>
                 </section>
               </aside>

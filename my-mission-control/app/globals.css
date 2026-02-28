@@ -6,20 +6,24 @@
   --text: #1d1b20;
   --muted: #625b71;
   --outline: #d0d7e7;
-  --primary: #6750a4;
-  --primary-container: #e9ddff;
+  --primary: #c94e3d;
+  --primary-container: #ffd8d2;
+  --nav-active: #f77c69;
+  --nav-active-text: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #11131a;
-    --surface: #1b1f2a;
-    --surface-2: #232837;
-    --text: #e6e1e5;
-    --muted: #b4adc2;
-    --outline: #3a3f50;
-    --primary: #d0bcff;
-    --primary-container: #4f378b;
+    --bg: #000000;
+    --surface: #111111;
+    --surface-2: #1a1a1a;
+    --text: #f4f4f4;
+    --muted: #c9c0c0;
+    --outline: #2f2f2f;
+    --primary: #ff6b5b;
+    --primary-container: #4a1b16;
+    --nav-active: #f77c69;
+    --nav-active-text: #ffffff;
   }
 }
 
@@ -74,8 +78,9 @@ body {
 }
 
 .side-nav button.active {
-  background: var(--primary-container);
-  border-color: var(--outline);
+  background: var(--nav-active);
+  color: var(--nav-active-text);
+  border-color: var(--nav-active);
 }
 
 .container {
@@ -102,10 +107,11 @@ header p {
 
 .card {
   border: 1px solid var(--outline);
-  border-radius: 16px;
+  border-radius: 20px;
   background: var(--surface);
   padding: 16px;
   margin-top: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.08);
 }
 
 .kpi-grid {
@@ -149,8 +155,21 @@ header p {
 
 .mini-chart span {
   flex: 1;
-  background: linear-gradient(180deg, #5b79ff, #3248a8);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 80%, white), var(--primary));
   border-radius: 4px;
+}
+
+.intent-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--outline);
+}
+
+.intent-box h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
 }
 
 .row {
