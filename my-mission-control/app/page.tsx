@@ -92,6 +92,8 @@ export default function Home() {
   const [taskSearch, setTaskSearch] = useState("");
   const [searchStatus, setSearchStatus] = useState("all");
   const [searchPeriod, setSearchPeriod] = useState("all");
+  const [rangeStart, setRangeStart] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
 
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -376,12 +378,18 @@ export default function Home() {
     return tasks.filter((t) => {
       if (taskSearch && !t.text.includes(taskSearch)) return false;
       if (searchStatus !== "all" && t.status !== searchStatus) return false;
-      if (searchPeriod === "today" && !isToday(t.createdAt)) return false;
+      if (searchPeriod === "24h" && now - t.createdAt > 24 * 60 * 60 * 1000) return false;
       if (searchPeriod === "7d" && now - t.createdAt > 7 * 24 * 60 * 60 * 1000) return false;
       if (searchPeriod === "30d" && now - t.createdAt > 30 * 24 * 60 * 60 * 1000) return false;
+      if (searchPeriod === "custom") {
+        if (!rangeStart || !rangeEnd) return false;
+        const from = new Date(`${rangeStart}T00:00:00`).getTime();
+        const to = new Date(`${rangeEnd}T23:59:59`).getTime();
+        if (t.createdAt < from || t.createdAt > to) return false;
+      }
       return true;
     });
-  }, [tasks, taskSearch, searchStatus, searchPeriod]);
+  }, [tasks, taskSearch, searchStatus, searchPeriod, rangeStart, rangeEnd]);
 
   const slackSummary = useMemo(() => {
     const topOpen = tasks.filter((t) => !t.done).slice(0, 3).map((t) => `- [${t.category} / ${t.status}] ${t.text}`).join("\n");
@@ -442,12 +450,9 @@ export default function Home() {
 
           {activePage === "tasks" ? (
             <div>
-              <section className="card tasks-topbar">
+              <section className="tasks-topbar">
                 <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                  <div className="row">
-                    <button>タスク管理</button>
-                    <button>履歴</button>
-                  </div>
+                  <h2 style={{ margin: 0 }}>タスク管理</h2>
                   <button onClick={addTask}>＋新規タスク登録</button>
                 </div>
               </section>
@@ -458,19 +463,26 @@ export default function Home() {
               </section>
 
               <section className="card">
-                <div className="row">
-                  <input value={taskSearch} onChange={(e) => setTaskSearch(e.target.value)} placeholder="検索バー" />
+                <div className="row task-filter-row">
+                  <input className="task-search-input" value={taskSearch} onChange={(e) => setTaskSearch(e.target.value)} placeholder="検索" />
                   <select value={searchStatus} onChange={(e) => setSearchStatus(e.target.value)}>
-                    <option value="all">検索オプション1: 進捗状況(すべて)</option>
+                    <option value="all">進捗状況</option>
                     {boardStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <select value={searchPeriod} onChange={(e) => setSearchPeriod(e.target.value)}>
-                    <option value="all">検索オプション2: 選択期間(すべて)</option>
-                    <option value="today">今日</option>
-                    <option value="7d">7日</option>
-                    <option value="30d">30日</option>
+                    <option value="all">検索期間</option>
+                    <option value="24h">24時間</option>
+                    <option value="7d">7日前</option>
+                    <option value="30d">30日前</option>
+                    <option value="custom">それ以上前</option>
                   </select>
                 </div>
+                {searchPeriod === "custom" ? (
+                  <div className="row" style={{ marginTop: 8 }}>
+                    <input type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} />
+                    <input type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} />
+                  </div>
+                ) : null}
               </section>
 
               <section className="task-board-5col">

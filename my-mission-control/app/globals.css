@@ -154,6 +154,16 @@ header p {
 
 .tasks-topbar {
   margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.task-filter-row {
+  flex-wrap: nowrap;
+}
+
+.task-search-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .tasks-status-grid {
