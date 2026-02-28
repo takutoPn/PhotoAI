@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 
-type Task = { id: string; text: string; done: boolean; createdAt: number; doneAt?: number; category: string; status: string };
+type Task = { id: string; text: string; title?: string; dueDate?: string; description?: string; done: boolean; createdAt: number; doneAt?: number; category: string; status: string };
 type Cycle = { id: string; label: string; minutes: number; createdAt: number };
 type FocusSession = { id: string; minutes: number; createdAt: number };
 type Cal = { id: string; summary: string; primary?: boolean };
@@ -94,6 +94,12 @@ export default function Home() {
   const [searchPeriod, setSearchPeriod] = useState("all");
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editorTitle, setEditorTitle] = useState("");
+  const [editorDueDate, setEditorDueDate] = useState("");
+  const [editorStatus, setEditorStatus] = useState("未着手");
+  const [editorDescription, setEditorDescription] = useState("");
 
   const [durationMin, setDurationMin] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -131,7 +137,10 @@ export default function Home() {
     const manual = localStorage.getItem("mmc.manualCalendars.v8");
     const ctg = localStorage.getItem("mmc.categories.v8");
     const sts = localStorage.getItem("mmc.statuses.v8");
-    if (t) setTasks(JSON.parse(t));
+    if (t) {
+      const parsed = JSON.parse(t);
+      setTasks(parsed.map((x: any) => ({ ...x, title: x.title ?? x.text ?? "", text: x.text ?? x.title ?? "" })));
+    }
     if (fs) setFocusSessions(JSON.parse(fs));
     if (c) setCycles(JSON.parse(c));
     if (ch) setChannelName(ch);
@@ -284,7 +293,7 @@ export default function Home() {
   const addTask = () => {
     const text = taskInput.trim();
     if (!text) return;
-    setTasks((prev) => [{ id: crypto.randomUUID(), text, done: selectedStatus === "作業済み", createdAt: Date.now(), category: selectedCategory, status: selectedStatus }, ...prev]);
+    setTasks((prev) => [{ id: crypto.randomUUID(), text, title: text, dueDate: "", description: "", done: selectedStatus === "作業済み", createdAt: Date.now(), category: selectedCategory, status: selectedStatus }, ...prev]);
     setTaskInput("");
   };
 
@@ -293,6 +302,70 @@ export default function Home() {
     if (!id) return;
     setManualCalendarIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setManualInput("");
+  };
+
+  const openCreateEditor = (presetStatus = "未着手") => {
+    setEditingId(null);
+    setEditorTitle("");
+    setEditorDueDate("");
+    setEditorStatus(presetStatus);
+    setEditorDescription("");
+    setEditorOpen(true);
+  };
+
+  const openEditEditor = (task: Task) => {
+    setEditingId(task.id);
+    setEditorTitle(task.title ?? task.text);
+    setEditorDueDate(task.dueDate ?? "");
+    setEditorStatus(task.status);
+    setEditorDescription(task.description ?? "");
+    setEditorOpen(true);
+  };
+
+  const saveEditor = () => {
+    const title = editorTitle.trim();
+    if (!title) return;
+
+    if (editingId) {
+      setTasks((prev) => prev.map((t) => t.id === editingId ? {
+        ...t,
+        text: title,
+        title,
+        dueDate: editorDueDate,
+        status: editorStatus,
+        description: editorDescription,
+        done: editorStatus === "作業済み",
+        doneAt: editorStatus === "作業済み" ? Date.now() : undefined
+      } : t));
+    } else {
+      setTasks((prev) => [{
+        id: crypto.randomUUID(),
+        text: title,
+        title,
+        dueDate: editorDueDate,
+        description: editorDescription,
+        done: editorStatus === "作業済み",
+        createdAt: Date.now(),
+        doneAt: editorStatus === "作業済み" ? Date.now() : undefined,
+        category: selectedCategory,
+        status: editorStatus
+      }, ...prev]);
+    }
+    setEditorOpen(false);
+  };
+
+  const cancelEditor = () => {
+    if (window.confirm("キャンセルしてよいですか？")) {
+      setEditorOpen(false);
+    }
+  };
+
+  const deleteEditingTask = () => {
+    if (!editingId) return;
+    if (window.confirm("このタスクを削除しますか？")) {
+      setTasks((prev) => prev.filter((t) => t.id !== editingId));
+      setEditorOpen(false);
+    }
   };
 
   const addCategory = () => {
@@ -450,11 +523,11 @@ export default function Home() {
 
           {activePage === "tasks" ? (
             <div>
-              <section className="card tasks-topbar">
+              <section className="tasks-topbar">
                 <div className="tasks-topbar-grid">
                   <div className="tasks-title">タスク管理</div>
                   <article className="card mini-stat-action">
-                    <button onClick={addTask}>＋新規タスク登録</button>
+                    <button onClick={() => openCreateEditor()}>＋新規タスク登録</button>
                   </article>
                   <article className="card mini-stat-card">
                     <h3>総タスク</h3>
@@ -496,12 +569,13 @@ export default function Home() {
                   });
                   return (
                     <div key={statusName} className="card task-col">
-                      <h3>{statusName} <span className="muted">({bucket.length}件)</span></h3>
-                      <div className="task-cards">
+                      <h3>{statusName} <span className="muted">{bucket.length}件</span></h3>
+                      <div className="task-cards" onDoubleClick={() => openCreateEditor(statusName)}>
                         {bucket.map((t) => (
                           <article key={t.id} className="task-mini-card">
                             <b>[{t.category}]</b>
-                            <p>{t.text}</p>
+                            <p>{t.title ?? t.text}</p>
+                            <button onClick={() => openEditEditor(t)}>編集</button>
                             <select value={t.status} onChange={(e) => {
                               const next = e.target.value;
                               setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined } : x));
@@ -551,21 +625,40 @@ export default function Home() {
           ) : null}
 
           <aside>
-            <section className="card weather-widget">
-              <h2>東京の天気</h2>
-              <p className="weather-main weather-line">{weather ? <><WeatherIcon kind={weather.weatherIcon} /> {weather.weather} / {weather.temp}°C</> : "取得中..."}</p>
-              <p>{weather ? `最低 ${weather.min}°C / 最高 ${weather.max}°C` : "気温レンジ取得中"}</p>
-              <p className="muted">天気ソース: {weather?.source ?? "-"}</p>
-              <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
-              <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
-            </section>
-            <section className="card log-widget">
-              <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                <h2>OpenClaw ログ</h2>
-                <button onClick={refreshLog}>更新</button>
-              </div>
-              <pre className="log-pre">{openclawLog}</pre>
-            </section>
+            {activePage === "tasks" ? (
+              editorOpen ? (
+                <section className="card">
+                  <h2>{editingId ? "タスク編集" : "新規タスク登録"}</h2>
+                  <div className="row"><input value={editorTitle} onChange={(e) => setEditorTitle(e.target.value)} placeholder="タイトル" /></div>
+                  <div className="row"><input type="date" value={editorDueDate} onChange={(e) => setEditorDueDate(e.target.value)} /></div>
+                  <div className="row"><select value={editorStatus} onChange={(e) => setEditorStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+                  <textarea value={editorDescription} onChange={(e) => setEditorDescription(e.target.value)} placeholder="説明" rows={6} />
+                  <div className="row" style={{ justifyContent: "space-between" }}>
+                    <button onClick={cancelEditor}>キャンセル</button>
+                    <button onClick={saveEditor}>確定</button>
+                  </div>
+                  {editingId ? <div className="row" style={{ marginTop: 8 }}><button onClick={deleteEditingTask}>削除</button></div> : null}
+                </section>
+              ) : <section className="card"><p>新規タスク登録または編集を押すとここに表示されます。</p></section>
+            ) : (
+              <>
+                <section className="card weather-widget">
+                  <h2>東京の天気</h2>
+                  <p className="weather-main weather-line">{weather ? <><WeatherIcon kind={weather.weatherIcon} /> {weather.weather} / {weather.temp}°C</> : "取得中..."}</p>
+                  <p>{weather ? `最低 ${weather.min}°C / 最高 ${weather.max}°C` : "気温レンジ取得中"}</p>
+                  <p className="muted">天気ソース: {weather?.source ?? "-"}</p>
+                  <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
+                  <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
+                </section>
+                <section className="card log-widget">
+                  <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                    <h2>OpenClaw ログ</h2>
+                    <button onClick={refreshLog}>更新</button>
+                  </div>
+                  <pre className="log-pre">{openclawLog}</pre>
+                </section>
+              </>
+            )}
           </aside>
         </section>
       </main>
