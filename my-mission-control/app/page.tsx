@@ -274,7 +274,13 @@ export default function Home() {
     <div className="app-shell">
       <aside className="sidebar">
         <h2>Mission</h2>
-        <nav><a className="active">HOME</a></nav>
+        <nav className="side-nav">
+          <a className="active" href="#dashboard">Dashboard</a>
+          <a href="#tasks">Tasks</a>
+          <a href="#calendar">カレンダー</a>
+          <a href="#memory">メモリー</a>
+          <a href="#token">Token</a>
+        </nav>
       </aside>
 
       <main className="container">
@@ -282,13 +288,13 @@ export default function Home() {
 
         <section className="content-grid">
           <div>
-            <section className="kpi-grid">
+            <section className="kpi-grid" id="dashboard">
               <article className="kpi card"><h3>今日の完了</h3><strong>{todayDone}件</strong></article>
               <article className="kpi card"><h3>今日の予定</h3><strong>{todayEvents.length}件</strong></article>
               <article className="kpi card"><h3>明日の予定</h3><strong>{tomorrowEvents.length}件</strong></article>
             </section>
 
-            <section className="card">
+            <section className="card" id="tasks">
               <h2>1) タスク</h2>
               <div className="row">
                 <input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" />
@@ -343,7 +349,7 @@ export default function Home() {
               <p>平均サイクル: <b>{avgCycle}分</b></p>
             </section>
 
-            <section className="card">
+            <section className="card" id="calendar">
               <h2>3) Calendar</h2>
               <div className="row"><button onClick={loadEvents} disabled={status !== "authenticated" || loadingCalendar}>{loadingCalendar ? "読込中..." : "予定を更新"}</button></div>
               {calendarError ? <p className="error">{calendarError}</p> : null}
@@ -382,13 +388,13 @@ export default function Home() {
           </div>
 
           <aside>
-            <section className="card">
-              <h2>4) Slack Daily Brief Composer</h2>
+            <section className="card" id="memory">
+              <h2>4) メモリー（Slack Brief）</h2>
               <div className="row"><input value={channelName} onChange={(e) => setChannelName(e.target.value)} placeholder="#openclaw-missioncontrol" /><button onClick={() => navigator.clipboard.writeText(slackSummary)}>サマリーをコピー</button></div>
               <pre>{slackSummary}</pre>
             </section>
 
-            <section className="card">
+            <section className="card" id="token">
               <h2>5) AI Token 使用状況</h2>
               <textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} />
               <div className="row"><span>Token: <b>{usage.tokens ?? "-"}</b></span><span>Cost: <b>{usage.cost ?? "-"}</b></span><span>Model: <b>{usage.model ?? "-"}</b></span></div>

@@ -29,10 +29,25 @@ body {
   margin: 0 0 12px;
 }
 
-.sidebar a.active {
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.side-nav a {
   display: block;
   padding: 8px 10px;
   border-radius: 8px;
+  color: #d9e4ff;
+  text-decoration: none;
+}
+
+.side-nav a:hover {
+  background: #121d3b;
+}
+
+.side-nav a.active {
   background: #182345;
 }
 
