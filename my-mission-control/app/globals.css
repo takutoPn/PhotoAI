@@ -6,9 +6,9 @@
   --text: #1d1b20;
   --muted: #625b71;
   --outline: #d0d7e7;
-  --primary: #c94e3d;
+  --primary: #9f1500;
   --primary-container: #ffd8d2;
-  --nav-active: #f77c69;
+  --nav-active: #9f1500;
   --nav-active-text: #ffffff;
 }
 
@@ -20,9 +20,9 @@
     --text: #f4f4f4;
     --muted: #c9c0c0;
     --outline: #2f2f2f;
-    --primary: #ff6b5b;
+    --primary: #ff5e46;
     --primary-container: #4a1b16;
-    --nav-active: #f77c69;
+    --nav-active: #9f1500;
     --nav-active-text: #ffffff;
   }
 }
@@ -123,21 +123,27 @@ header p {
 .kpi h3 {
   margin: 0;
   font-size: 0.95rem;
-  color: #9eabd0;
+  color: #ffffff;
 }
 
 .kpi strong {
   display: block;
   margin-top: 8px;
   font-size: 1.8rem;
+  color: #ffffff;
 }
 
 .kpi small {
-  color: #8b99bf;
+  color: #ffffff;
 }
 
 .dashboard-kpi {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.kpi.card {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 80%, black), color-mix(in srgb, var(--primary) 50%, black));
+  border-color: color-mix(in srgb, var(--primary) 60%, black);
 }
 
 .dashboard-main {
@@ -231,6 +237,12 @@ pre {
 .weather-widget .weather-main {
   font-size: 1.2rem;
   font-weight: 700;
+}
+
+.weather-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .log-widget .log-pre {

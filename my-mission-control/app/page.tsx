@@ -9,7 +9,7 @@ type FocusSession = { id: string; minutes: number; createdAt: number };
 type Cal = { id: string; summary: string; primary?: boolean };
 type EventItem = { id: string; summary: string; start: string; htmlLink?: string; allDay?: boolean; calendarId: string };
 type UsageParsed = { tokens?: string; cost?: string; model?: string };
-type Weather = { city: string; temp: number; weather: string; cloth: string; rainText: string };
+type Weather = { city: string; temp: number; min: number; max: number; weather: string; weatherIcon: string; cloth: string; rainText: string };
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 const toYmd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -40,6 +40,21 @@ const decodeGoogleCid = (input: string) => {
     return decoded || cid;
   } catch {
     return cid;
+  }
+};
+
+const WeatherIcon = ({ kind }: { kind?: string }) => {
+  const common = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8 };
+  switch (kind) {
+    case "sunny":
+      return <svg {...common}><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2" /></svg>;
+    case "cloud":
+      return <svg {...common}><path d="M7 18h10a4 4 0 0 0 0-8 5 5 0 0 0-9.7-1.5A3.5 3.5 0 0 0 7 18Z" /></svg>;
+    case "rainy":
+    case "rainy_heavy":
+      return <svg {...common}><path d="M7 14h10a4 4 0 0 0 0-8 5 5 0 0 0-9.7-1.5A3.5 3.5 0 0 0 7 14Z" /><path d="M9 17l-1 3M13 17l-1 3M17 17l-1 3" /></svg>;
+    default:
+      return <svg {...common}><circle cx="12" cy="12" r="4" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>;
   }
 };
 
@@ -367,13 +382,6 @@ export default function Home() {
                     <h2>Today Focus</h2>
                     <p>未完了タスク: <b>{tasks.filter((t) => !t.done).length}件</b></p>
                     <p>次アクション: <b>{tasks.find((t) => !t.done)?.text ?? "なし"}</b></p>
-
-                    <div className="intent-box">
-                      <h3>やりたそうなこと</h3>
-                      <ul>
-                        {inferredIntents.map((line, i) => <li key={i}>{line}</li>)}
-                      </ul>
-                    </div>
                   </div>
                   <div className="mini-chart">
                     {Array.from({ length: 14 }).map((_, i) => {
@@ -382,11 +390,18 @@ export default function Home() {
                     })}
                   </div>
                 </section>
+                <section className="card intent-box">
+                  <h2>やりたそうなこと</h2>
+                  <ul>
+                    {inferredIntents.map((line, i) => <li key={i}>{line}</li>)}
+                  </ul>
+                </section>
               </div>
               <aside>
                 <section className="card weather-widget">
                   <h2>東京の天気</h2>
-                  <p className="weather-main">{weather ? `${weather.weather} / ${weather.temp}°C` : "取得中..."}</p>
+                  <p className="weather-main weather-line">{weather ? <><WeatherIcon kind={weather.weatherIcon} /> {weather.weather} / {weather.temp}°C</> : "取得中..."}</p>
+                  <p>{weather ? `最低 ${weather.min}°C / 最高 ${weather.max}°C` : "気温レンジ取得中"}</p>
                   <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
                   <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
                 </section>
