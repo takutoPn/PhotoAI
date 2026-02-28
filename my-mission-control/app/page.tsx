@@ -9,6 +9,7 @@ type FocusSession = { id: string; minutes: number; createdAt: number };
 type Cal = { id: string; summary: string; primary?: boolean };
 type EventItem = { id: string; summary: string; start: string; htmlLink?: string; allDay?: boolean; calendarId: string };
 type UsageParsed = { tokens?: string; cost?: string; model?: string };
+type Weather = { city: string; temp: number; weather: string; cloth: string; rainText: string };
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 const toYmd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -94,6 +95,8 @@ export default function Home() {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
+  const [weather, setWeather] = useState<Weather | null>(null);
+  const [openclawLog, setOpenclawLog] = useState("ログ読込中...");
 
   useEffect(() => {
     const t = localStorage.getItem("mmc.tasks.v8");
@@ -173,6 +176,39 @@ export default function Home() {
     if (status === "authenticated") loadCalendars();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch("/api/weather/tokyo", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setWeather(data);
+      } catch {
+        // noop
+      }
+    };
+
+    const fetchLog = async () => {
+      try {
+        const res = await fetch("/api/openclaw/logs", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setOpenclawLog(data.text ?? "ログなし");
+      } catch {
+        setOpenclawLog("ログ取得失敗");
+      }
+    };
+
+    fetchWeather();
+    fetchLog();
+    const logTimer = setInterval(fetchLog, 15000);
+    const weatherTimer = setInterval(fetchWeather, 10 * 60 * 1000);
+    return () => {
+      clearInterval(logTimer);
+      clearInterval(weatherTimer);
+    };
+  }, []);
 
   const combinedCalendarIds = Array.from(new Set([...selectedCalendarIds, ...manualCalendarIds]));
 
@@ -279,6 +315,12 @@ export default function Home() {
   const tomorrowEvents = eventsByDay.get(tomorrowKey) ?? [];
   const bottlenecks = [...cycles].sort((a, b) => b.minutes - a.minutes).slice(0, 3);
 
+  const inferredIntent = useMemo(() => {
+    const latest = tasks.find((t) => !t.done)?.text;
+    if (latest) return `${latest} を進めたい`;
+    return "でじるみAI対応を進めたい";
+  }, [tasks]);
+
   const slackSummary = useMemo(() => {
     const topOpen = tasks.filter((t) => !t.done).slice(0, 3).map((t) => `- [${t.category} / ${t.status}] ${t.text}`).join("\n");
     const topBottleneck = bottlenecks.map((b) => `- ${b.label}: ${b.minutes}分`).join("\n");
@@ -328,15 +370,17 @@ export default function Home() {
                 </section>
               </div>
               <aside>
-                <section className="card">
-                  <h2>クイック状況</h2>
-                  <p>カテゴリ数: <b>{categories.length}</b></p>
-                  <p>進捗種別: <b>{statuses.length}</b></p>
-                  <p>カレンダー件数: <b>{combinedCalendarIds.length}</b></p>
+                <section className="card weather-widget">
+                  <h2>東京の天気</h2>
+                  <p className="weather-main">{weather ? `${weather.weather} / ${weather.temp}°C` : "取得中..."}</p>
+                  <p>{weather?.cloth ?? "服装アドバイス取得中"}</p>
+                  <p>{weather?.rainText ?? "雨具アドバイス取得中"}</p>
+                  <hr />
+                  <p>やりたそうなこと: <b>{inferredIntent}</b></p>
                 </section>
-                <section className="card">
-                  <h2>メモ</h2>
-                  <p>右側はダッシュボードの補助情報エリアとして利用。</p>
+                <section className="card log-widget">
+                  <h2>OpenClaw ログ</h2>
+                  <pre className="log-pre">{openclawLog}</pre>
                 </section>
               </aside>
             </>

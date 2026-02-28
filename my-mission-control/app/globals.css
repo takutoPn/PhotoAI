@@ -188,6 +188,17 @@ pre {
   overflow-x: auto;
 }
 
+.weather-widget .weather-main {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.log-widget .log-pre {
+  max-height: 240px;
+  overflow-y: auto;
+  font-size: 0.8rem;
+}
+
 textarea {
   width: 100%;
   border-radius: 8px;
