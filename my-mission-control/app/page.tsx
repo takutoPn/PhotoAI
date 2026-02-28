@@ -425,13 +425,34 @@ export default function Home() {
 
           {activePage === "tasks" ? (
             <div>
+              <section className="tasks-summary-grid">
+                <article className="card"><h3>総タスク</h3><strong>{tasks.length}件</strong></article>
+                <article className="card"><h3>進行中</h3><strong>{tasks.filter((t) => t.status === "作業中").length}件</strong></article>
+                <article className="card"><h3>確認待ち</h3><strong>{tasks.filter((t) => t.status === "確認中").length}件</strong></article>
+                <article className="card"><h3>作業済み</h3><strong>{tasks.filter((t) => t.done).length}件</strong></article>
+              </section>
+
+              <section className="tasks-two-col">
+                <div className="card">
+                  <h2>タスク入力</h2>
+                  <div className="row"><input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" /><select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select><select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select><button onClick={addTask}>追加</button></div>
+                  <div className="row" style={{ marginTop: 8 }}><input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="分類を追加" /><button onClick={addCategory}>分類追加</button><input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} placeholder="進捗を追加" /><button onClick={addStatus}>進捗追加</button></div>
+                </div>
+
+                <div className="card">
+                  <h2>進捗ボード</h2>
+                  <div className="status-chip-grid">
+                    {statuses.map((s) => <div key={s} className="status-chip"><span>{s}</span><b>{tasks.filter((t) => t.status === s).length}</b></div>)}
+                  </div>
+                  <div className="row" style={{ marginTop: 10 }}>{categories.map((c) => <button key={c} onClick={() => removeCategory(c)}>分類削除: {c}</button>)}{statuses.map((s) => <button key={s} onClick={() => removeStatus(s)}>進捗削除: {s}</button>)}</div>
+                </div>
+              </section>
+
               <section className="card">
-                <h2>タスク</h2>
-                <div className="row"><input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" /><select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select><select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select><button onClick={addTask}>追加</button></div>
-                <div className="row" style={{ marginTop: 8 }}><input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="分類を追加" /><button onClick={addCategory}>分類追加</button><input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} placeholder="進捗を追加" /><button onClick={addStatus}>進捗追加</button></div>
-                <div className="row" style={{ marginTop: 8 }}>{categories.map((c) => <button key={c} onClick={() => removeCategory(c)}>分類削除: {c}</button>)}{statuses.map((s) => <button key={s} onClick={() => removeStatus(s)}>進捗削除: {s}</button>)}</div>
+                <h2>タスク一覧</h2>
                 <ul>{tasks.map((t) => <li key={t.id}><span className={t.done ? "done" : ""}>[{t.category}] {t.text}</span><select value={t.status} onChange={(e) => { const next = e.target.value; setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined } : x)); }}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select></li>)}</ul>
               </section>
+
               <section className="card">
                 <h2>Focus Sprint + Bottleneck Radar</h2>
                 <div className="row">{[15, 25, 45].map((m) => <button key={m} onClick={() => { setDurationMin(m); setTimeLeft(m * 60); setRunning(false); }}>{m}分</button>)}</div>

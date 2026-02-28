@@ -152,6 +152,34 @@ header p {
   align-items: flex-end;
 }
 
+.tasks-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tasks-two-col {
+  display: grid;
+  grid-template-columns: 6fr 4fr;
+  gap: 12px;
+}
+
+.status-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.status-chip {
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--surface-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .mini-chart {
   height: 120px;
   display: flex;
@@ -357,6 +385,14 @@ textarea {
   }
 
   .dashboard-main {
+    grid-template-columns: 1fr;
+  }
+
+  .tasks-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tasks-two-col {
     grid-template-columns: 1fr;
   }
 
