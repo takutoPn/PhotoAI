@@ -35,20 +35,24 @@ body {
   gap: 6px;
 }
 
-.side-nav a {
+.side-nav button {
   display: block;
+  width: 100%;
+  text-align: left;
   padding: 8px 10px;
   border-radius: 8px;
   color: #d9e4ff;
-  text-decoration: none;
+  background: transparent;
+  border: 1px solid transparent;
 }
 
-.side-nav a:hover {
+.side-nav button:hover {
   background: #121d3b;
 }
 
-.side-nav a.active {
+.side-nav button.active {
   background: #182345;
+  border-color: #2f3d68;
 }
 
 .container {

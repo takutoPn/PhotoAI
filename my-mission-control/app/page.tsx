@@ -44,6 +44,7 @@ const decodeGoogleCid = (input: string) => {
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const [activePage, setActivePage] = useState<"dashboard" | "tasks" | "calendar" | "memory" | "token">("dashboard");
 
   const [taskInput, setTaskInput] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -275,11 +276,11 @@ export default function Home() {
       <aside className="sidebar">
         <h2>Mission</h2>
         <nav className="side-nav">
-          <a className="active" href="#dashboard">Dashboard</a>
-          <a href="#tasks">Tasks</a>
-          <a href="#calendar">カレンダー</a>
-          <a href="#memory">メモリー</a>
-          <a href="#token">Token</a>
+          <button className={activePage === "dashboard" ? "active" : ""} onClick={() => setActivePage("dashboard")}>ダッシュボード</button>
+          <button className={activePage === "tasks" ? "active" : ""} onClick={() => setActivePage("tasks")}>タスク</button>
+          <button className={activePage === "calendar" ? "active" : ""} onClick={() => setActivePage("calendar")}>カレンダー</button>
+          <button className={activePage === "memory" ? "active" : ""} onClick={() => setActivePage("memory")}>メモリ</button>
+          <button className={activePage === "token" ? "active" : ""} onClick={() => setActivePage("token")}>トークン</button>
         </nav>
       </aside>
 
@@ -287,119 +288,64 @@ export default function Home() {
         <header><h1>My Mission Control</h1><p>Slack運用前提の個人ワークフロー・コックピット</p></header>
 
         <section className="content-grid">
-          <div>
-            <section className="kpi-grid" id="dashboard">
-              <article className="kpi card"><h3>今日の完了</h3><strong>{todayDone}件</strong></article>
-              <article className="kpi card"><h3>今日の予定</h3><strong>{todayEvents.length}件</strong></article>
-              <article className="kpi card"><h3>明日の予定</h3><strong>{tomorrowEvents.length}件</strong></article>
-            </section>
+          {activePage === "dashboard" ? (
+            <div>
+              <section className="kpi-grid">
+                <article className="kpi card"><h3>今日の完了</h3><strong>{todayDone}件</strong></article>
+                <article className="kpi card"><h3>今日の予定</h3><strong>{todayEvents.length}件</strong></article>
+                <article className="kpi card"><h3>明日の予定</h3><strong>{tomorrowEvents.length}件</strong></article>
+              </section>
+              <section className="card"><h2>概要</h2><p>左のサイドバーからページを選んで編集・確認できます。</p></section>
+            </div>
+          ) : null}
 
-            <section className="card" id="tasks">
-              <h2>1) タスク</h2>
-              <div className="row">
-                <input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" />
-                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select>
-                <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                <button onClick={addTask}>追加</button>
-              </div>
+          {activePage === "tasks" ? (
+            <div>
+              <section className="card">
+                <h2>タスク</h2>
+                <div className="row"><input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" /><select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select><select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select><button onClick={addTask}>追加</button></div>
+                <div className="row" style={{ marginTop: 8 }}><input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="分類を追加" /><button onClick={addCategory}>分類追加</button><input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} placeholder="進捗を追加" /><button onClick={addStatus}>進捗追加</button></div>
+                <div className="row" style={{ marginTop: 8 }}>{categories.map((c) => <button key={c} onClick={() => removeCategory(c)}>分類削除: {c}</button>)}{statuses.map((s) => <button key={s} onClick={() => removeStatus(s)}>進捗削除: {s}</button>)}</div>
+                <ul>{tasks.map((t) => <li key={t.id}><span className={t.done ? "done" : ""}>[{t.category}] {t.text}</span><select value={t.status} onChange={(e) => { const next = e.target.value; setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined } : x)); }}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select></li>)}</ul>
+              </section>
+              <section className="card">
+                <h2>Focus Sprint + Bottleneck Radar</h2>
+                <div className="row">{[15, 25, 45].map((m) => <button key={m} onClick={() => { setDurationMin(m); setTimeLeft(m * 60); setRunning(false); }}>{m}分</button>)}</div>
+                <div className="timer">{formatTime(timeLeft)}</div>
+                <div className="row"><button onClick={() => setRunning(true)}>開始</button><button onClick={() => setRunning(false)}>停止</button><button onClick={() => { setRunning(false); setTimeLeft(durationMin * 60); }}>リセット</button></div>
+                <hr />
+                <div className="row"><input value={cycleLabel} onChange={(e) => setCycleLabel(e.target.value)} placeholder="工程名" /><input type="number" value={cycleMinutes} onChange={(e) => setCycleMinutes(e.target.value)} placeholder="分" min={1} /><button onClick={() => { const m = Number(cycleMinutes); if (!cycleLabel.trim() || !m || m <= 0) return; setCycles((prev) => [{ id: crypto.randomUUID(), label: cycleLabel.trim(), minutes: m, createdAt: Date.now() }, ...prev]); setCycleLabel(""); setCycleMinutes(""); }}>記録</button></div>
+                <p>平均サイクル: <b>{avgCycle}分</b></p>
+              </section>
+            </div>
+          ) : null}
 
-              <div className="row" style={{ marginTop: 8 }}>
-                <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="分類を追加" />
-                <button onClick={addCategory}>分類追加</button>
-                <input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} placeholder="進捗を追加" />
-                <button onClick={addStatus}>進捗追加</button>
-              </div>
+          {activePage === "calendar" ? (
+            <div>
+              <section className="card">
+                <h2>カレンダー</h2>
+                <div className="row"><button onClick={loadEvents} disabled={status !== "authenticated" || loadingCalendar}>{loadingCalendar ? "読込中..." : "予定を更新"}</button></div>
+                {calendarError ? <p className="error">{calendarError}</p> : null}
+                {calendarWarning ? <p className="warn">{calendarWarning}</p> : null}
+                <div className="calendar-picker">{calendars.map((c) => <label key={c.id} className="cal-check"><input type="checkbox" checked={selectedCalendarIds.includes(c.id)} onChange={() => setSelectedCalendarIds((prev) => (prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]))} /> {c.primary ? "⭐ " : ""}{c.summary}</label>)}</div>
+                <div className="row"><input value={manualInput} onChange={(e) => setManualInput(e.target.value)} placeholder="追加カレンダーURL(?cid=...) or カレンダーID" /><button onClick={addManualCalendar}>ID追加</button></div>
+                {manualCalendarIds.length ? <ul>{manualCalendarIds.map((id) => <li key={id}><code>{id}</code> <button onClick={() => setManualCalendarIds((prev) => prev.filter((x) => x !== id))}>削除</button></li>)}</ul> : null}
+                <div className="calendar-split"><div><h3>今日の予定</h3><ul>{todayEvents.length ? todayEvents.map((e) => <li key={`${e.calendarId}-${e.id}`}>{formatClock(e.start, e.allDay)} {e.summary}</li>) : <li>予定なし</li>}</ul></div><div><h3>明日の予定</h3><ul>{tomorrowEvents.length ? tomorrowEvents.map((e) => <li key={`${e.calendarId}-${e.id}`}>{formatClock(e.start, e.allDay)} {e.summary}</li>) : <li>予定なし</li>}</ul></div></div>
+                <div className="month-head"><button onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}>← 前月</button><h3>{monthCursor.getFullYear()}年{monthCursor.getMonth() + 1}月</h3><button onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}>翌月 →</button></div>
+                <div className="month-weekdays">{WEEK.map((w) => <div key={w}>{w}</div>)}</div>
+                <div className="month-grid">{Array.from({ length: startOffset }).map((_, i) => <div key={`blank-${i}`} className="day-cell muted" />)}{Array.from({ length: daysInMonth }).map((_, i) => { const day = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), i + 1); const key = toYmd(day); const dayEvents = eventsByDay.get(key) ?? []; return <div className="day-cell" key={key}><div className="day-head">{i + 1}</div>{dayEvents.slice(0, 2).map((e) => <div className="event-chip" key={`${e.calendarId}-${e.id}`}>● {e.summary}</div>)}{dayEvents.length > 2 ? <div className="event-chip">+{dayEvents.length - 2}件</div> : null}</div>; })}</div>
+              </section>
+              <section className="card"><h2>Google Calendar連携</h2><div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}><div><b>状態:</b> {status === "authenticated" ? `接続中 (${session?.user?.email})` : "未接続"}</div>{status === "authenticated" ? <button onClick={() => signOut()}>連携を解除</button> : <button onClick={() => signIn("google")}>Googleでログイン</button>}</div></section>
+            </div>
+          ) : null}
 
-              <div className="row" style={{ marginTop: 8 }}>
-                {categories.map((c) => <button key={c} onClick={() => removeCategory(c)}>分類削除: {c}</button>)}
-                {statuses.map((s) => <button key={s} onClick={() => removeStatus(s)}>進捗削除: {s}</button>)}
-              </div>
+          {activePage === "memory" ? (
+            <aside><section className="card"><h2>メモリ（Slack Brief）</h2><div className="row"><input value={channelName} onChange={(e) => setChannelName(e.target.value)} placeholder="#openclaw-missioncontrol" /><button onClick={() => navigator.clipboard.writeText(slackSummary)}>サマリーをコピー</button></div><pre>{slackSummary}</pre></section></aside>
+          ) : null}
 
-              <ul>
-                {tasks.map((t) => (
-                  <li key={t.id}>
-                    <span className={t.done ? "done" : ""}>[{t.category}] {t.text}</span>
-                    <select
-                      value={t.status}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setTasks((prev) =>
-                          prev.map((x) =>
-                            x.id === t.id
-                              ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined }
-                              : x
-                          )
-                        );
-                      }}
-                    >
-                      {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="card">
-              <h2>2) Focus Sprint + Bottleneck Radar</h2>
-              <div className="row">{[15, 25, 45].map((m) => <button key={m} onClick={() => { setDurationMin(m); setTimeLeft(m * 60); setRunning(false); }}>{m}分</button>)}</div>
-              <div className="timer">{formatTime(timeLeft)}</div>
-              <div className="row"><button onClick={() => setRunning(true)}>開始</button><button onClick={() => setRunning(false)}>停止</button><button onClick={() => { setRunning(false); setTimeLeft(durationMin * 60); }}>リセット</button></div>
-              <hr />
-              <div className="row"><input value={cycleLabel} onChange={(e) => setCycleLabel(e.target.value)} placeholder="工程名" /><input type="number" value={cycleMinutes} onChange={(e) => setCycleMinutes(e.target.value)} placeholder="分" min={1} /><button onClick={() => { const m = Number(cycleMinutes); if (!cycleLabel.trim() || !m || m <= 0) return; setCycles((prev) => [{ id: crypto.randomUUID(), label: cycleLabel.trim(), minutes: m, createdAt: Date.now() }, ...prev]); setCycleLabel(""); setCycleMinutes(""); }}>記録</button></div>
-              <p>平均サイクル: <b>{avgCycle}分</b></p>
-            </section>
-
-            <section className="card" id="calendar">
-              <h2>3) Calendar</h2>
-              <div className="row"><button onClick={loadEvents} disabled={status !== "authenticated" || loadingCalendar}>{loadingCalendar ? "読込中..." : "予定を更新"}</button></div>
-              {calendarError ? <p className="error">{calendarError}</p> : null}
-              {calendarWarning ? <p className="warn">{calendarWarning}</p> : null}
-
-              <div className="calendar-picker">{calendars.map((c) => <label key={c.id} className="cal-check"><input type="checkbox" checked={selectedCalendarIds.includes(c.id)} onChange={() => setSelectedCalendarIds((prev) => (prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]))} /> {c.primary ? "⭐ " : ""}{c.summary}</label>)}</div>
-
-              <div className="row"><input value={manualInput} onChange={(e) => setManualInput(e.target.value)} placeholder="追加カレンダーURL(?cid=...) or カレンダーID" /><button onClick={addManualCalendar}>ID追加</button></div>
-              {manualCalendarIds.length ? <ul>{manualCalendarIds.map((id) => <li key={id}><code>{id}</code> <button onClick={() => setManualCalendarIds((prev) => prev.filter((x) => x !== id))}>削除</button></li>)}</ul> : null}
-
-              <div className="calendar-split">
-                <div><h3>今日の予定</h3><ul>{todayEvents.length ? todayEvents.map((e) => <li key={`${e.calendarId}-${e.id}`}>{formatClock(e.start, e.allDay)} {e.summary}</li>) : <li>予定なし</li>}</ul></div>
-                <div><h3>明日の予定</h3><ul>{tomorrowEvents.length ? tomorrowEvents.map((e) => <li key={`${e.calendarId}-${e.id}`}>{formatClock(e.start, e.allDay)} {e.summary}</li>) : <li>予定なし</li>}</ul></div>
-              </div>
-
-              <div className="month-head"><button onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}>← 前月</button><h3>{monthCursor.getFullYear()}年{monthCursor.getMonth() + 1}月</h3><button onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}>翌月 →</button></div>
-              <div className="month-weekdays">{WEEK.map((w) => <div key={w}>{w}</div>)}</div>
-              <div className="month-grid">
-                {Array.from({ length: startOffset }).map((_, i) => <div key={`blank-${i}`} className="day-cell muted" />)}
-                {Array.from({ length: daysInMonth }).map((_, i) => {
-                  const day = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), i + 1);
-                  const key = toYmd(day);
-                  const dayEvents = eventsByDay.get(key) ?? [];
-                  return <div className="day-cell" key={key}><div className="day-head">{i + 1}</div>{dayEvents.slice(0, 2).map((e) => <div className="event-chip" key={`${e.calendarId}-${e.id}`}>● {e.summary}</div>)}{dayEvents.length > 2 ? <div className="event-chip">+{dayEvents.length - 2}件</div> : null}</div>;
-                })}
-              </div>
-            </section>
-
-            <section className="card">
-              <h2>Google Calendar連携</h2>
-              <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                <div><b>状態:</b> {status === "authenticated" ? `接続中 (${session?.user?.email})` : "未接続"}</div>
-                {status === "authenticated" ? <button onClick={() => signOut()}>連携を解除</button> : <button onClick={() => signIn("google")}>Googleでログイン</button>}
-              </div>
-            </section>
-          </div>
-
-          <aside>
-            <section className="card" id="memory">
-              <h2>4) メモリー（Slack Brief）</h2>
-              <div className="row"><input value={channelName} onChange={(e) => setChannelName(e.target.value)} placeholder="#openclaw-missioncontrol" /><button onClick={() => navigator.clipboard.writeText(slackSummary)}>サマリーをコピー</button></div>
-              <pre>{slackSummary}</pre>
-            </section>
-
-            <section className="card" id="token">
-              <h2>5) AI Token 使用状況</h2>
-              <textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} />
-              <div className="row"><span>Token: <b>{usage.tokens ?? "-"}</b></span><span>Cost: <b>{usage.cost ?? "-"}</b></span><span>Model: <b>{usage.model ?? "-"}</b></span></div>
-            </section>
-          </aside>
+          {activePage === "token" ? (
+            <aside><section className="card"><h2>トークン</h2><textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} /><div className="row"><span>Token: <b>{usage.tokens ?? "-"}</b></span><span>Cost: <b>{usage.cost ?? "-"}</b></span><span>Model: <b>{usage.model ?? "-"}</b></span></div></section></aside>
+          ) : null}
         </section>
       </main>
     </div>
