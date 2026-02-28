@@ -305,27 +305,41 @@ export default function Home() {
 
         <section className="content-grid">
           {activePage === "dashboard" ? (
-            <div>
-              <section className="kpi-grid dashboard-kpi">
-                <article className="kpi card"><h3>今日の完了</h3><strong>{todayDone}件</strong><small>タスク進捗</small></article>
-                <article className="kpi card"><h3>今日の予定</h3><strong>{todayEvents.length}件</strong><small>Google Calendar</small></article>
-                <article className="kpi card"><h3>明日の予定</h3><strong>{tomorrowEvents.length}件</strong><small>Google Calendar</small></article>
-                <article className="kpi card"><h3>平均サイクル</h3><strong>{avgCycle}分</strong><small>Focus記録</small></article>
-              </section>
-              <section className="card dashboard-main">
-                <div>
-                  <h2>Today Focus</h2>
-                  <p>未完了タスク: <b>{tasks.filter((t) => !t.done).length}件</b></p>
-                  <p>次アクション: <b>{tasks.find((t) => !t.done)?.text ?? "なし"}</b></p>
-                </div>
-                <div className="mini-chart">
-                  {Array.from({ length: 14 }).map((_, i) => {
-                    const h = 20 + ((i * 13) % 60);
-                    return <span key={i} style={{ height: `${h}px` }} />;
-                  })}
-                </div>
-              </section>
-            </div>
+            <>
+              <div>
+                <section className="kpi-grid dashboard-kpi">
+                  <article className="kpi card"><h3>今日の完了</h3><strong>{todayDone}件</strong><small>タスク進捗</small></article>
+                  <article className="kpi card"><h3>今日の予定</h3><strong>{todayEvents.length}件</strong><small>Google Calendar</small></article>
+                  <article className="kpi card"><h3>明日の予定</h3><strong>{tomorrowEvents.length}件</strong><small>Google Calendar</small></article>
+                  <article className="kpi card"><h3>平均サイクル</h3><strong>{avgCycle}分</strong><small>Focus記録</small></article>
+                </section>
+                <section className="card dashboard-main">
+                  <div>
+                    <h2>Today Focus</h2>
+                    <p>未完了タスク: <b>{tasks.filter((t) => !t.done).length}件</b></p>
+                    <p>次アクション: <b>{tasks.find((t) => !t.done)?.text ?? "なし"}</b></p>
+                  </div>
+                  <div className="mini-chart">
+                    {Array.from({ length: 14 }).map((_, i) => {
+                      const h = 20 + ((i * 13) % 60);
+                      return <span key={i} style={{ height: `${h}px` }} />;
+                    })}
+                  </div>
+                </section>
+              </div>
+              <aside>
+                <section className="card">
+                  <h2>クイック状況</h2>
+                  <p>カテゴリ数: <b>{categories.length}</b></p>
+                  <p>進捗種別: <b>{statuses.length}</b></p>
+                  <p>カレンダー件数: <b>{combinedCalendarIds.length}</b></p>
+                </section>
+                <section className="card">
+                  <h2>メモ</h2>
+                  <p>右側はダッシュボードの補助情報エリアとして利用。</p>
+                </section>
+              </aside>
+            </>
           ) : null}
 
           {activePage === "tasks" ? (
