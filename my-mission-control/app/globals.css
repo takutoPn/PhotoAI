@@ -36,11 +36,13 @@ body {
 }
 
 .side-nav button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 10px 10px;
+  border-radius: 10px;
   color: #d9e4ff;
   background: transparent;
   border: 1px solid transparent;
@@ -100,6 +102,33 @@ header p {
   display: block;
   margin-top: 8px;
   font-size: 1.8rem;
+}
+
+.kpi small {
+  color: #8b99bf;
+}
+
+.dashboard-kpi {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: flex-end;
+}
+
+.mini-chart {
+  height: 120px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.mini-chart span {
+  flex: 1;
+  background: linear-gradient(180deg, #5b79ff, #3248a8);
+  border-radius: 4px;
 }
 
 .row {
@@ -260,6 +289,10 @@ textarea {
 
 @media (max-width: 800px) {
   .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-main {
     grid-template-columns: 1fr;
   }
 

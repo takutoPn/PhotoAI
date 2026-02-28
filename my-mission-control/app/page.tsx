@@ -276,11 +276,11 @@ export default function Home() {
       <aside className="sidebar">
         <h2>Mission</h2>
         <nav className="side-nav">
-          <button className={activePage === "dashboard" ? "active" : ""} onClick={() => setActivePage("dashboard")}>ダッシュボード</button>
-          <button className={activePage === "tasks" ? "active" : ""} onClick={() => setActivePage("tasks")}>タスク</button>
-          <button className={activePage === "calendar" ? "active" : ""} onClick={() => setActivePage("calendar")}>カレンダー</button>
-          <button className={activePage === "memory" ? "active" : ""} onClick={() => setActivePage("memory")}>メモリ</button>
-          <button className={activePage === "token" ? "active" : ""} onClick={() => setActivePage("token")}>トークン</button>
+          <button className={activePage === "dashboard" ? "active" : ""} onClick={() => setActivePage("dashboard")}><span>📊</span>ダッシュボード</button>
+          <button className={activePage === "tasks" ? "active" : ""} onClick={() => setActivePage("tasks")}><span>✅</span>タスク</button>
+          <button className={activePage === "calendar" ? "active" : ""} onClick={() => setActivePage("calendar")}><span>🗓️</span>カレンダー</button>
+          <button className={activePage === "memory" ? "active" : ""} onClick={() => setActivePage("memory")}><span>🧠</span>メモリ</button>
+          <button className={activePage === "token" ? "active" : ""} onClick={() => setActivePage("token")}><span>🪙</span>トークン</button>
         </nav>
       </aside>
 
@@ -290,12 +290,25 @@ export default function Home() {
         <section className="content-grid">
           {activePage === "dashboard" ? (
             <div>
-              <section className="kpi-grid">
-                <article className="kpi card"><h3>今日の完了</h3><strong>{todayDone}件</strong></article>
-                <article className="kpi card"><h3>今日の予定</h3><strong>{todayEvents.length}件</strong></article>
-                <article className="kpi card"><h3>明日の予定</h3><strong>{tomorrowEvents.length}件</strong></article>
+              <section className="kpi-grid dashboard-kpi">
+                <article className="kpi card"><h3>今日の完了</h3><strong>{todayDone}件</strong><small>タスク進捗</small></article>
+                <article className="kpi card"><h3>今日の予定</h3><strong>{todayEvents.length}件</strong><small>Google Calendar</small></article>
+                <article className="kpi card"><h3>明日の予定</h3><strong>{tomorrowEvents.length}件</strong><small>Google Calendar</small></article>
+                <article className="kpi card"><h3>平均サイクル</h3><strong>{avgCycle}分</strong><small>Focus記録</small></article>
               </section>
-              <section className="card"><h2>概要</h2><p>左のサイドバーからページを選んで編集・確認できます。</p></section>
+              <section className="card dashboard-main">
+                <div>
+                  <h2>Today Focus</h2>
+                  <p>未完了タスク: <b>{tasks.filter((t) => !t.done).length}件</b></p>
+                  <p>次アクション: <b>{tasks.find((t) => !t.done)?.text ?? "なし"}</b></p>
+                </div>
+                <div className="mini-chart">
+                  {Array.from({ length: 14 }).map((_, i) => {
+                    const h = 20 + ((i * 13) % 60);
+                    return <span key={i} style={{ height: `${h}px` }} />;
+                  })}
+                </div>
+              </section>
             </div>
           ) : null}
 
