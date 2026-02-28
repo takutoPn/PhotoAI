@@ -74,7 +74,7 @@ body {
 }
 
 .side-nav button:hover {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  background: rgba(159, 21, 0, 0.18);
 }
 
 .side-nav button.active {
@@ -142,8 +142,8 @@ header p {
 }
 
 .kpi.card {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 80%, black), color-mix(in srgb, var(--primary) 50%, black));
-  border-color: color-mix(in srgb, var(--primary) 60%, black);
+  background: #111111;
+  border-color: #232323;
 }
 
 .dashboard-main {
@@ -161,16 +161,16 @@ header p {
 
 .mini-chart span {
   flex: 1;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 80%, white), var(--primary));
+  background: linear-gradient(180deg, #d65a48, #9f1500);
   border-radius: 4px;
 }
 
 .intent-box {
   margin-top: 12px;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  border: none;
+  padding: 12px;
+  border-radius: 14px;
+  background: #111111;
+  border: 1px solid #232323;
 }
 
 .intent-box h3 {
