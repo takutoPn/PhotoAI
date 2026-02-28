@@ -131,7 +131,6 @@ export default function Home() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [weather, setWeather] = useState<Weather | null>(null);
-  const [openclawLog, setOpenclawLog] = useState("ログは手動更新にしています");
 
   useEffect(() => {
     const t = localStorage.getItem("mmc.tasks.v8");
@@ -215,17 +214,6 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  const refreshLog = async () => {
-    try {
-      const res = await fetch("/api/openclaw/logs", { cache: "no-store" });
-      if (!res.ok) return;
-      const data = await res.json();
-      setOpenclawLog(data.text ?? "ログなし");
-    } catch {
-      setOpenclawLog("ログ取得失敗");
-    }
-  };
-
   useEffect(() => {
     const map: Record<string, "dashboard" | "tasks" | "calendar" | "memory" | "token"> = {
       "/": "dashboard",
@@ -261,11 +249,6 @@ export default function Home() {
       }
     };
 
-    const fetchBoth = async () => {
-      await fetchWeather();
-      await refreshLog();
-    };
-
     const msToNextSlot = () => {
       const now = new Date();
       const slots = [0, 6, 12, 18];
@@ -284,12 +267,12 @@ export default function Home() {
     let timer: ReturnType<typeof setTimeout>;
     const schedule = () => {
       timer = setTimeout(async () => {
-        await fetchBoth();
+        await fetchWeather();
         schedule();
       }, msToNextSlot());
     };
 
-    fetchBoth();
+    fetchWeather();
     schedule();
     return () => clearTimeout(timer);
   }, []);
@@ -714,13 +697,6 @@ export default function Home() {
                       setQuickTitle(""); setQuickStatus("未着手"); setQuickDescription("");
                     }}>確定</button>
                   </div>
-                </section>
-                <section className="card log-widget">
-                  <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                    <h2>OpenClaw ログ</h2>
-                    <button onClick={refreshLog}>更新</button>
-                  </div>
-                  <pre className="log-pre">{openclawLog}</pre>
                 </section>
               </>
             )}
