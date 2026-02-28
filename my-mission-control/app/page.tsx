@@ -588,12 +588,6 @@ export default function Home() {
                 })}
               </section>
 
-              <section className="card">
-                <h2>タスク設定</h2>
-                <div className="row"><input value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="次にやること" /><select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select><select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select><button onClick={addTask}>追加</button></div>
-                <div className="row" style={{ marginTop: 8 }}><input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="分類を追加" /><button onClick={addCategory}>分類追加</button><input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} placeholder="進捗を追加" /><button onClick={addStatus}>進捗追加</button></div>
-                <div className="row" style={{ marginTop: 8 }}>{categories.map((c) => <button key={c} onClick={() => removeCategory(c)}>分類削除: {c}</button>)}{statuses.map((s) => <button key={s} onClick={() => removeStatus(s)}>進捗削除: {s}</button>)}</div>
-              </section>
             </div>
           ) : null}
 
@@ -625,21 +619,19 @@ export default function Home() {
           ) : null}
 
           <aside>
-            {activePage === "tasks" ? (
-              editorOpen ? (
-                <section className="card">
-                  <h2>{editingId ? "タスク編集" : "新規タスク登録"}</h2>
-                  <div className="row"><input value={editorTitle} onChange={(e) => setEditorTitle(e.target.value)} placeholder="タイトル" /></div>
-                  <div className="row"><input type="date" value={editorDueDate} onChange={(e) => setEditorDueDate(e.target.value)} /></div>
-                  <div className="row"><select value={editorStatus} onChange={(e) => setEditorStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
-                  <textarea value={editorDescription} onChange={(e) => setEditorDescription(e.target.value)} placeholder="説明" rows={6} />
-                  <div className="row" style={{ justifyContent: "space-between" }}>
-                    <button onClick={cancelEditor}>キャンセル</button>
-                    <button onClick={saveEditor}>確定</button>
-                  </div>
-                  {editingId ? <div className="row" style={{ marginTop: 8 }}><button onClick={deleteEditingTask}>削除</button></div> : null}
-                </section>
-              ) : <section className="card"><p>新規タスク登録または編集を押すとここに表示されます。</p></section>
+            {activePage === "tasks" && editorOpen ? (
+              <section className="card">
+                <h2>{editingId ? "タスク編集" : "新規タスク登録"}</h2>
+                <div className="row"><input value={editorTitle} onChange={(e) => setEditorTitle(e.target.value)} placeholder="タイトル" /></div>
+                <div className="row"><input type="date" value={editorDueDate} onChange={(e) => setEditorDueDate(e.target.value)} /></div>
+                <div className="row"><select value={editorStatus} onChange={(e) => setEditorStatus(e.target.value)}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+                <textarea value={editorDescription} onChange={(e) => setEditorDescription(e.target.value)} placeholder="説明" rows={6} />
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <button onClick={cancelEditor}>キャンセル</button>
+                  <button onClick={saveEditor}>確定</button>
+                </div>
+                {editingId ? <div className="row" style={{ marginTop: 8 }}><button onClick={deleteEditingTask}>削除</button></div> : null}
+              </section>
             ) : (
               <>
                 <section className="card weather-widget">
