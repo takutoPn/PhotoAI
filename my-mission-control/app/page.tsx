@@ -650,10 +650,10 @@ export default function Home() {
                     <div key={statusName} className="card task-col" onDoubleClick={() => openCreateEditor(statusName)}>
                       <h3>{statusName} <span className="muted">{bucket.length}件</span></h3>
                       <div className="task-cards" onDoubleClick={() => openCreateEditor(statusName)}>
-                        {bucket.map((t) => (
+                        {bucket.map((t, idx) => (
                           <article key={t.id} className="task-mini-card">
-                            <b>[{t.category}]</b>
-                            <p>{t.title ?? t.text}</p>
+                            <b>{String(idx + 1).padStart(2, "0")} {t.title ?? t.text}</b>
+                            {t.description ? <p>{t.description}</p> : <p className="muted">説明なし</p>}
                             <button onClick={() => openEditEditor(t)}>編集</button>
                             <select value={t.status} onChange={async (e) => {
                               const next = e.target.value;
