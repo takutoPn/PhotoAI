@@ -525,6 +525,13 @@ export default function Home() {
 
   const boardStatuses = ["未着手", "作業中", "確認中", "修正中", "作業済み"];
 
+  const taskNumberMap = useMemo(() => {
+    const sorted = [...tasks].sort((a, b) => a.createdAt - b.createdAt);
+    const map = new Map<string, string>();
+    sorted.forEach((t, i) => map.set(t.id, String(i + 1).padStart(2, "0")));
+    return map;
+  }, [tasks]);
+
   const filteredTasks = useMemo(() => {
     const now = Date.now();
     return tasks.filter((t) => {
@@ -650,9 +657,9 @@ export default function Home() {
                     <div key={statusName} className="card task-col" onDoubleClick={() => openCreateEditor(statusName)}>
                       <h3>{statusName} <span className="muted">{bucket.length}件</span></h3>
                       <div className="task-cards" onDoubleClick={() => openCreateEditor(statusName)}>
-                        {bucket.map((t, idx) => (
+                        {bucket.map((t) => (
                           <article key={t.id} className="task-mini-card">
-                            <b>{String(idx + 1).padStart(2, "0")} {t.title ?? t.text}</b>
+                            <b>{taskNumberMap.get(t.id) ?? "--"} {t.title ?? t.text}</b>
                             {t.description ? <p>{t.description}</p> : <p className="muted">説明なし</p>}
                             <button onClick={() => openEditEditor(t)}>編集</button>
                             <select value={t.status} onChange={async (e) => {
