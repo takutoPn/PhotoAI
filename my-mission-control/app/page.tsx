@@ -133,6 +133,33 @@ export default function Home() {
   const [weather, setWeather] = useState<Weather | null>(null);
   const [openclawLog, setOpenclawLog] = useState("手動更新でログを取得できます");
 
+  const reloadTasksFromDb = async () => {
+    try {
+      const res = await fetch("/api/tasks", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const mapped = (data.tasks ?? []).map((x: any) => ({
+        ...x,
+        createdAt: new Date(x.createdAt).getTime(),
+        doneAt: x.doneAt ? new Date(x.doneAt).getTime() : undefined
+      }));
+      setTasks(mapped);
+    } catch {
+      // noop
+    }
+  };
+
+  const reloadTasks = async () => {
+    try {
+      const res = await fetch("/api/tasks", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setTasks((data.tasks ?? []).map((x: any) => ({ ...x, title: x.title ?? x.text, text: x.text ?? x.title })));
+    } catch {
+      // fallback to local storage below
+    }
+  };
+
   useEffect(() => {
     const t = localStorage.getItem("mmc.tasks.v8");
     const fs = localStorage.getItem("mmc.focus.v7");
@@ -163,6 +190,7 @@ export default function Home() {
       setStatuses(parsed);
       if (parsed[0]) setSelectedStatus(parsed[0]);
     }
+    reloadTasksFromDb();
   }, []);
 
   useEffect(() => localStorage.setItem("mmc.tasks.v8", JSON.stringify(tasks)), [tasks]);
@@ -317,10 +345,40 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, monthCursor, combinedCalendarIds.join(",")]);
 
-  const addTask = () => {
+  const createTask = async (payload: { title: string; status: string; description?: string; startDate?: string; endDate?: string }) => {
+    await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: payload.title,
+        category: selectedCategory,
+        status: payload.status,
+        description: payload.description ?? "",
+        startDate: payload.startDate ?? "",
+        endDate: payload.endDate ?? ""
+      })
+    });
+    await reloadTasksFromDb();
+  };
+
+  const updateTask = async (id: string, payload: { title: string; status: string; description?: string; startDate?: string; endDate?: string }) => {
+    await fetch(`/api/tasks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    await reloadTasksFromDb();
+  };
+
+  const removeTask = async (id: string) => {
+    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    await reloadTasksFromDb();
+  };
+
+  const addTask = async () => {
     const text = taskInput.trim();
     if (!text) return;
-    setTasks((prev) => [{ id: crypto.randomUUID(), text, title: text, startDate: "", endDate: "", description: "", done: selectedStatus === "作業済み", createdAt: Date.now(), category: selectedCategory, status: selectedStatus }, ...prev]);
+    await createTask({ title: text, status: selectedStatus });
     setTaskInput("");
   };
 
@@ -351,36 +409,26 @@ export default function Home() {
     setEditorOpen(true);
   };
 
-  const saveEditor = () => {
+  const saveEditor = async () => {
     const title = editorTitle.trim();
     if (!title) return;
 
     if (editingId) {
-      setTasks((prev) => prev.map((t) => t.id === editingId ? {
-        ...t,
-        text: title,
+      await updateTask(editingId, {
         title,
-        startDate: editorStartDate,
-        endDate: editorEndDate,
         status: editorStatus,
-        description: editorDescription,
-        done: editorStatus === "作業済み",
-        doneAt: editorStatus === "作業済み" ? Date.now() : undefined
-      } : t));
-    } else {
-      setTasks((prev) => [{
-        id: crypto.randomUUID(),
-        text: title,
-        title,
         startDate: editorStartDate,
         endDate: editorEndDate,
-        description: editorDescription,
-        done: editorStatus === "作業済み",
-        createdAt: Date.now(),
-        doneAt: editorStatus === "作業済み" ? Date.now() : undefined,
-        category: selectedCategory,
-        status: editorStatus
-      }, ...prev]);
+        description: editorDescription
+      });
+    } else {
+      await createTask({
+        title,
+        status: editorStatus,
+        startDate: editorStartDate,
+        endDate: editorEndDate,
+        description: editorDescription
+      });
     }
     setEditorOpen(false);
   };
@@ -391,10 +439,10 @@ export default function Home() {
     }
   };
 
-  const deleteEditingTask = () => {
+  const deleteEditingTask = async () => {
     if (!editingId) return;
     if (window.confirm("このタスクを削除しますか？")) {
-      setTasks((prev) => prev.filter((t) => t.id !== editingId));
+      await removeTask(editingId);
       setEditorOpen(false);
     }
   };
@@ -607,9 +655,15 @@ export default function Home() {
                             <b>[{t.category}]</b>
                             <p>{t.title ?? t.text}</p>
                             <button onClick={() => openEditEditor(t)}>編集</button>
-                            <select value={t.status} onChange={(e) => {
+                            <select value={t.status} onChange={async (e) => {
                               const next = e.target.value;
-                              setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, status: next, done: next === "作業済み", doneAt: next === "作業済み" ? Date.now() : undefined } : x));
+                              await updateTask(t.id, {
+                                title: t.title ?? t.text,
+                                status: next,
+                                startDate: t.startDate,
+                                endDate: t.endDate,
+                                description: t.description
+                              });
                             }}>{statuses.map((s) => <option key={s} value={s}>{s}</option>)}</select>
                           </article>
                         ))}
@@ -702,10 +756,10 @@ export default function Home() {
                       setEditorDescription("");
                       setEditorOpen(true);
                     }}>詳細</button>
-                    <button onClick={() => {
+                    <button onClick={async () => {
                       const title = quickTitle.trim();
                       if (!title) return;
-                      setTasks((prev) => [{ id: crypto.randomUUID(), text: title, title, startDate: "", endDate: "", description: "", done: quickStatus === "作業済み", createdAt: Date.now(), doneAt: quickStatus === "作業済み" ? Date.now() : undefined, category: selectedCategory, status: quickStatus }, ...prev]);
+                      await createTask({ title, status: quickStatus });
                       setQuickTitle(""); setQuickStatus("未着手"); setQuickDescription("");
                     }}>確定</button>
                   </div>
