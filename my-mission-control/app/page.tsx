@@ -116,6 +116,7 @@ export default function Home() {
   const [cycles, setCycles] = useState<Cycle[]>([]);
 
   const [usageRaw, setUsageRaw] = useState("");
+  const [tokenLimit, setTokenLimit] = useState("1000000");
   const [channelName, setChannelName] = useState("#openclaw-missioncontrol");
 
   const [calendars, setCalendars] = useState<Cal[]>([]);
@@ -170,6 +171,7 @@ export default function Home() {
     const manual = localStorage.getItem("mmc.manualCalendars.v8");
     const ctg = localStorage.getItem("mmc.categories.v8");
     const sts = localStorage.getItem("mmc.statuses.v8");
+    const tlimit = localStorage.getItem("mmc.tokenLimit.v1");
     if (t) {
       const parsed = JSON.parse(t);
       setTasks(parsed.map((x: any) => ({ ...x, title: x.title ?? x.text ?? "", text: x.text ?? x.title ?? "", startDate: x.startDate ?? "", endDate: x.endDate ?? x.dueDate ?? "" })));
@@ -190,6 +192,7 @@ export default function Home() {
       setStatuses(parsed);
       if (parsed[0]) setSelectedStatus(parsed[0]);
     }
+    if (tlimit) setTokenLimit(tlimit);
     reloadTasksFromDb();
   }, []);
 
@@ -198,6 +201,7 @@ export default function Home() {
   useEffect(() => localStorage.setItem("mmc.cycles.v8", JSON.stringify(cycles)), [cycles]);
   useEffect(() => localStorage.setItem("mmc.channel.v8", channelName), [channelName]);
   useEffect(() => localStorage.setItem("mmc.usageRaw.v8", usageRaw), [usageRaw]);
+  useEffect(() => localStorage.setItem("mmc.tokenLimit.v1", tokenLimit), [tokenLimit]);
   useEffect(() => localStorage.setItem("mmc.selectedCalendars.v8", JSON.stringify(selectedCalendarIds)), [selectedCalendarIds]);
   useEffect(() => localStorage.setItem("mmc.manualCalendars.v8", JSON.stringify(manualCalendarIds)), [manualCalendarIds]);
   useEffect(() => localStorage.setItem("mmc.categories.v8", JSON.stringify(categories)), [categories]);
@@ -488,6 +492,9 @@ export default function Home() {
   }, [cycles]);
 
   const usage = useMemo(() => parseUsage(usageRaw), [usageRaw]);
+  const usedTokens = Number((usage.tokens ?? "0").replace(/,/g, "")) || 0;
+  const maxTokens = Number(tokenLimit.replace(/,/g, "")) || 0;
+  const tokenUsagePct = maxTokens > 0 ? Math.min(100, Math.round((usedTokens / maxTokens) * 1000) / 10) : 0;
 
   const firstCell = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
   const startOffset = firstCell.getDay();
@@ -714,7 +721,20 @@ export default function Home() {
           ) : null}
 
           {activePage === "token" ? (
-            <div><section className="card"><h2>トークン</h2><textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} /><div className="row"><span>Token: <b>{usage.tokens ?? "-"}</b></span><span>Cost: <b>{usage.cost ?? "-"}</b></span><span>Model: <b>{usage.model ?? "-"}</b></span></div></section></div>
+            <div>
+              <section className="card">
+                <h2>トークン</h2>
+                <div className="row">
+                  <input value={tokenLimit} onChange={(e) => setTokenLimit(e.target.value)} placeholder="上限トークン数 (例: 1000000)" />
+                </div>
+                <textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} />
+                <div className="row"><span>Used: <b>{usage.tokens ?? "-"}</b></span><span>Limit: <b>{maxTokens || "-"}</b></span><span>Usage: <b>{tokenUsagePct}%</b></span></div>
+                <div className="row"><span>Cost: <b>{usage.cost ?? "-"}</b></span><span>Model: <b>{usage.model ?? "-"}</b></span></div>
+                <div style={{ marginTop: 10, border: "1px solid var(--outline)", borderRadius: 10, overflow: "hidden" }}>
+                  <div style={{ height: 12, width: `${tokenUsagePct}%`, background: "#9f1500" }} />
+                </div>
+              </section>
+            </div>
           ) : null}
 
           <aside>
