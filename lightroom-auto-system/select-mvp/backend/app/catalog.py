@@ -7,19 +7,42 @@ from typing import List
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".dng", ".cr2", ".cr3", ".nef", ".arw"}
 
 
-def _query_catalog_paths(conn: sqlite3.Connection) -> List[str]:
-    """Lightroom catalog(.lrcat)から画像パス候補を抽出する。
-    バージョン差異が大きいので、失敗時は呼び出し側でフォールバックする。
-    """
-    sql = """
-    SELECT rf.absolutePath || f.baseName || '.' || f.extension AS full_path
-    FROM AgLibraryFile f
-    JOIN AgLibraryFolder rf ON f.folder = rf.id_local
-    """
+def _run_query(conn: sqlite3.Connection, sql: str) -> list[str]:
     cur = conn.cursor()
     cur.execute(sql)
     rows = cur.fetchall()
     return [r[0] for r in rows if r and r[0]]
+
+
+def _query_catalog_paths(conn: sqlite3.Connection) -> List[str]:
+    """Lightroom catalog(.lrcat)から画像パス候補を抽出する。
+    カタログのスキーマ差異があるため、複数クエリを順番に試す。
+    """
+    queries = [
+        # 一部バージョン向け
+        """
+        SELECT rf.absolutePath || f.baseName || '.' || f.extension AS full_path
+        FROM AgLibraryFile f
+        JOIN AgLibraryFolder rf ON f.folder = rf.id_local
+        """,
+        # Lightroom Classicで一般的な構成
+        """
+        SELECT rr.absolutePath || af.pathFromRoot || f.baseName || '.' || f.extension AS full_path
+        FROM AgLibraryFile f
+        JOIN AgLibraryFolder af ON f.folder = af.id_local
+        JOIN AgLibraryRootFolder rr ON af.rootFolder = rr.id_local
+        """,
+    ]
+
+    for sql in queries:
+        try:
+            paths = _run_query(conn, sql)
+            if paths:
+                return paths
+        except sqlite3.Error:
+            continue
+
+    return []
 
 
 def parse_catalog_assets(catalog_path: str) -> list[str]:
