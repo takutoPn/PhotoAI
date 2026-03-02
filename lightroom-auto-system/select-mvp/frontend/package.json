@@ -1,0 +1,12 @@
+{
+  "name": "lightroom-select-mvp-ui",
+  "version": "0.1.0",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.0.2"
+  }
+}

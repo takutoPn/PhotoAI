@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lightroom Select MVP</title>
+    <style>
+      body { font-family: sans-serif; margin: 24px; background: #111; color: #eee; }
+      h1 { margin-bottom: 8px; }
+      .muted { color: #aaa; margin-bottom: 16px; }
+      .card { border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+      input { width: 100%; margin: 4px 0 10px; padding: 8px; background: #222; border: 1px solid #444; color: #fff; }
+      button { background: #4a8; color: #fff; border: 0; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
+      pre { white-space: pre-wrap; background: #1a1a1a; padding: 12px; border-radius: 6px; max-height: 380px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Lightroom Select MVP</h1>
+    <div class="muted">Catalogアップロード前提（PoC API接続）</div>
+
+    <div class="card">
+      <label>Project Name</label>
+      <input id="projectName" value="Wedding A" />
+
+      <label>Catalog Path (.lrcat)</label>
+      <input id="catalogPath" value="C:/jobs/wedding_a/catalog.lrcat" />
+
+      <label>Max per person</label>
+      <input id="maxPerPerson" type="number" value="3" />
+
+      <label>Max per cluster</label>
+      <input id="maxPerCluster" type="number" value="1" />
+
+      <button id="runBtn">ジョブ作成して実行</button>
+    </div>
+
+    <div class="card">
+      <h3>結果</h3>
+      <pre id="output">まだ実行されていません。</pre>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>
