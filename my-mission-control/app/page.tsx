@@ -175,10 +175,10 @@ export default function Home() {
 
   useEffect(() => {
     const t = localStorage.getItem("mmc.tasks.v8");
-    const fs = localStorage.getItem("mmc.focus.v7");
-    const c = localStorage.getItem("mmc.cycles.v7");
-    const ch = localStorage.getItem("mmc.channel.v7");
-    const ur = localStorage.getItem("mmc.usageRaw.v7");
+    const fs = localStorage.getItem("mmc.focus.v8");
+    const c = localStorage.getItem("mmc.cycles.v8");
+    const ch = localStorage.getItem("mmc.channel.v8");
+    const ur = localStorage.getItem("mmc.usageRaw.v8");
     const selected = localStorage.getItem("mmc.selectedCalendars.v8");
     const manual = localStorage.getItem("mmc.manualCalendars.v8");
     const ctg = localStorage.getItem("mmc.categories.v8");
