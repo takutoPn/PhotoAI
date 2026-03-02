@@ -36,3 +36,6 @@ class SelectionItem(BaseModel):
 class JobResult(BaseModel):
     job_id: str
     picks: List[SelectionItem]
+    total_assets: int = 0
+    picked_assets: int = 0
+    warnings: List[str] = Field(default_factory=list)

@@ -3,7 +3,8 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from uuid import uuid4
 from .schemas import Job, JobCreate, JobResult
-from .selector import run_poc_selection
+from .selector import run_selection
+from .catalog import parse_catalog_assets
 
 app = FastAPI(title="Lightroom Select MVP API", version="0.1.0")
 
@@ -50,12 +51,27 @@ def run_job(job_id: str):
         raise HTTPException(status_code=404, detail="job not found")
 
     jobs[job_id] = job.model_copy(update={"status": "running"})
-    picks = run_poc_selection(job_id, job.rules)
-    result = JobResult(job_id=job_id, picks=picks)
-    results[job_id] = result
-    jobs[job_id] = job.model_copy(update={"status": "done"})
+    warnings: list[str] = []
 
-    return result
+    try:
+        asset_paths = parse_catalog_assets(job.catalog_path)
+        if not asset_paths:
+            warnings.append("画像が見つかりませんでした")
+        picks = run_selection(asset_paths, job.rules)
+
+        result = JobResult(
+            job_id=job_id,
+            picks=picks,
+            total_assets=len(asset_paths),
+            picked_assets=sum(1 for p in picks if p.pick),
+            warnings=warnings,
+        )
+        results[job_id] = result
+        jobs[job_id] = job.model_copy(update={"status": "done"})
+        return result
+    except Exception as e:
+        jobs[job_id] = job.model_copy(update={"status": "failed"})
+        raise HTTPException(status_code=500, detail=f"job failed: {e}")
 
 
 @app.get("/jobs/{job_id}/selections", response_model=JobResult)
