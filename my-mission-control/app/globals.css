@@ -129,6 +129,11 @@ header p {
   color: var(--muted);
 }
 
+.stop-banner {
+  border-color: #9f1500;
+  background: rgba(159, 21, 0, 0.18);
+}
+
 .card {
   border: 1px solid var(--outline);
   border-radius: 20px;

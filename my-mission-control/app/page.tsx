@@ -526,6 +526,7 @@ export default function Home() {
   const parsedLimit = Number((usage.limit ?? "0").replace(/,/g, "")) || 0;
   const maxTokens = parsedLimit || Number(tokenLimit.replace(/,/g, "")) || 0;
   const tokenUsagePct = maxTokens > 0 ? Math.min(100, Math.round((usedTokens / maxTokens) * 1000) / 10) : 0;
+  const stopMode = tokenUsagePct >= 95;
 
   const firstCell = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
   const startOffset = firstCell.getDay();
@@ -614,6 +615,7 @@ export default function Home() {
 
       <main className="container">
         <header><h1>My Mission Control</h1></header>
+        {stopMode ? <section className="card stop-banner"><b>STOP MODE:</b> トークン使用率が95%以上のため、操作を一時停止しています。</section> : null}
 
         <section className="content-grid">
           {activePage === "dashboard" ? (
@@ -658,7 +660,7 @@ export default function Home() {
                 <div className="tasks-topbar-grid">
                   <div className="tasks-title">タスク管理</div>
                   <article className="card mini-stat-action">
-                    <button onClick={() => openCreateEditor()}>＋新規タスク登録</button>
+                    <button onClick={() => openCreateEditor()} disabled={stopMode}>＋新規タスク登録</button>
                   </article>
                   <article className="card mini-stat-card">
                     <h3>総タスク</h3>
@@ -796,7 +798,7 @@ export default function Home() {
                 </div>
                 <div className="row" style={{ justifyContent: "space-between" }}>
                   <button onClick={cancelEditor}>キャンセル</button>
-                  <button onClick={saveEditor}>確定</button>
+                  <button onClick={saveEditor} disabled={stopMode}>確定</button>
                 </div>
                 {editingId ? <div className="row" style={{ marginTop: 8 }}><button onClick={deleteEditingTask}>削除</button></div> : null}
               </section>
@@ -837,7 +839,7 @@ export default function Home() {
                       if (!title) return;
                       await createTask({ title, status: quickStatus });
                       setQuickTitle(""); setQuickStatus("未着手"); setQuickDescription("");
-                    }}>確定</button>
+                    }} disabled={stopMode}>確定</button>
                   </div>
                 </section>
                 <section className="card log-widget">
