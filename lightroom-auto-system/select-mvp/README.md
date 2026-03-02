@@ -31,8 +31,11 @@ python -m venv .venv
 # macOS/Linux
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8008
+python -m uvicorn app.main:app --reload --port 8008
 ```
+
+> もし Python 3.14 で `pydantic-core` ビルドエラーが出る場合は、
+> Python 3.12/3.13 で venv を作ると安定します。
 
 API: `http://localhost:8008`
 
