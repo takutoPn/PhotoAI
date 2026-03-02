@@ -270,6 +270,18 @@ export default function Home() {
     }
   };
 
+  const refreshTokenFromStatus = async () => {
+    try {
+      const res = await fetch("/api/openclaw/token-status", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.line) setUsageRaw(data.line);
+      else if (data?.text) setUsageRaw(data.text);
+    } catch {
+      // noop
+    }
+  };
+
   useEffect(() => {
     const map: Record<string, "dashboard" | "tasks" | "calendar" | "memory" | "token"> = {
       "/": "dashboard",
@@ -292,6 +304,12 @@ export default function Home() {
     setActivePage(p);
     router.push(pathMap[p]);
   };
+
+  useEffect(() => {
+    if (activePage === "token") {
+      refreshTokenFromStatus();
+    }
+  }, [activePage]);
 
   useEffect(() => {
     const fetchWeather = async () => {
@@ -751,6 +769,7 @@ export default function Home() {
                 <h3>基本設定</h3>
                 <div className="row">
                   <input value={tokenLimit} onChange={(e) => setTokenLimit(e.target.value)} placeholder="上限トークン数 (例: 1000000)" />
+                  <button onClick={refreshTokenFromStatus}>今の使用量を自動取得</button>
                 </div>
                 <details style={{ marginTop: 10 }}>
                   <summary>詳細設定（/status 貼り付け）</summary>
