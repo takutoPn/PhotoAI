@@ -9,7 +9,7 @@ type Cycle = { id: string; label: string; minutes: number; createdAt: number };
 type FocusSession = { id: string; minutes: number; createdAt: number };
 type Cal = { id: string; summary: string; primary?: boolean };
 type EventItem = { id: string; summary: string; start: string; htmlLink?: string; allDay?: boolean; calendarId: string };
-type UsageParsed = { tokens?: string; cost?: string; model?: string };
+type UsageParsed = { tokens?: string; cost?: string; model?: string; limit?: string };
 type Weather = { city: string; source?: string; temp: number; min: number; max: number; weather: string; weatherIcon: string; cloth: string; rainText: string };
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
@@ -19,6 +19,18 @@ const formatTime = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, 
 const isToday = (ts: number) => toYmd(new Date(ts)) === toYmd(new Date());
 
 const parseUsage = (text: string): UsageParsed => {
+  const short = text.match(/([\d.]+)k\s*\/\s*([\d.]+)k\s*\((\d+)%\)/i);
+  if (short) {
+    const used = Math.round(Number(short[1]) * 1000).toLocaleString();
+    const limit = Math.round(Number(short[2]) * 1000).toLocaleString();
+    return { tokens: used, model: undefined, cost: undefined, limit } as UsageParsed & { limit?: string };
+  }
+
+  const pair = text.match(/([\d,]+)\s*\/\s*([\d,]+)\s*\((\d+)%\)/);
+  if (pair) {
+    return { tokens: pair[1], model: undefined, cost: undefined, limit: pair[2] } as UsageParsed & { limit?: string };
+  }
+
   const tokens = text.match(/([\d,]+)\s*(tokens?|トークン)/i)?.[1];
   const cost = text.match(/\$\s*([\d.,]+)/)?.[1];
   const model = text.match(/model\s*[:=]\s*([^\n]+)/i)?.[1]?.trim();
@@ -493,7 +505,8 @@ export default function Home() {
 
   const usage = useMemo(() => parseUsage(usageRaw), [usageRaw]);
   const usedTokens = Number((usage.tokens ?? "0").replace(/,/g, "")) || 0;
-  const maxTokens = Number(tokenLimit.replace(/,/g, "")) || 0;
+  const parsedLimit = Number((usage.limit ?? "0").replace(/,/g, "")) || 0;
+  const maxTokens = parsedLimit || Number(tokenLimit.replace(/,/g, "")) || 0;
   const tokenUsagePct = maxTokens > 0 ? Math.min(100, Math.round((usedTokens / maxTokens) * 1000) / 10) : 0;
 
   const firstCell = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
