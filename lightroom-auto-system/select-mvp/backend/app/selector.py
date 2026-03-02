@@ -57,6 +57,9 @@ def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_d
         star1_ids.add(a["asset_id"])
 
     picks: list[SelectionItem] = []
+    raw_preview_budget = max(40, rules.target_picks * 2)
+    raw_preview_used = 0
+
     for a in enriched:
         if a["asset_id"] in star3_ids:
             star = 3
@@ -71,11 +74,20 @@ def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_d
             pick = False
             reason = f"★0 非採用: {a['reason']}"
 
+        should_generate_raw = (star >= 1) and (raw_preview_used < raw_preview_budget)
+        preview_path = resolve_preview_path(
+            a["path"],
+            preview_cache_dir=preview_cache_dir,
+            generate_raw=should_generate_raw,
+        )
+        if preview_path and should_generate_raw:
+            raw_preview_used += 1
+
         picks.append(
             SelectionItem(
                 asset_id=a["asset_id"],
                 path=a["path"],
-                preview_path=resolve_preview_path(a["path"], preview_cache_dir=preview_cache_dir),
+                preview_path=preview_path,
                 score=round(a["score"], 4),
                 person_id=a["person_id"],
                 cluster_id=a["cluster_id"],

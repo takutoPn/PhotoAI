@@ -43,7 +43,7 @@ def _generate_raw_preview(raw_path: Path, cache_dir: Path) -> str | None:
         return None
 
 
-def resolve_preview_path(asset_path: str, preview_cache_dir: str | None = None) -> str | None:
+def resolve_preview_path(asset_path: str, preview_cache_dir: str | None = None, generate_raw: bool = True) -> str | None:
     p = Path(asset_path)
     ext = p.suffix.lower()
 
@@ -61,7 +61,7 @@ def resolve_preview_path(asset_path: str, preview_cache_dir: str | None = None) 
                 return str(cand2)
 
         # 同名が無ければRAWデコードで生成
-        if preview_cache_dir:
+        if preview_cache_dir and generate_raw:
             generated = _generate_raw_preview(p, Path(preview_cache_dir))
             if generated:
                 return generated
