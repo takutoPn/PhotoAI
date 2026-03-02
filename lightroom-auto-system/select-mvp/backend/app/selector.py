@@ -4,6 +4,7 @@ from collections import defaultdict
 from math import ceil
 from .schemas import SelectionRules, SelectionItem
 from .quality import extract_features
+from .preview import resolve_preview_path
 
 
 def run_selection(asset_paths: list[str], rules: SelectionRules):
@@ -74,6 +75,7 @@ def run_selection(asset_paths: list[str], rules: SelectionRules):
             SelectionItem(
                 asset_id=a["asset_id"],
                 path=a["path"],
+                preview_path=resolve_preview_path(a["path"]),
                 score=round(a["score"], 4),
                 person_id=a["person_id"],
                 cluster_id=a["cluster_id"],

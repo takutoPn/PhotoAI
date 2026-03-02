@@ -18,6 +18,15 @@ function toFileUrl(p) {
   return encodeURI(`file:///${normalized}`);
 }
 
+function makePlaceholder(assetId) {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='500'>
+    <rect width='100%' height='100%' fill='#1f1f1f'/>
+    <text x='50%' y='45%' fill='#ddd' font-size='28' text-anchor='middle'>RAWプレビューなし</text>
+    <text x='50%' y='55%' fill='#999' font-size='18' text-anchor='middle'>${assetId}</text>
+  </svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 function setCatalogPathFromFile(file) {
   if (!file) return;
   const realPath = file.path || file.name;
@@ -93,7 +102,8 @@ function renderGallery() {
     card.className = 'item';
 
     const img = document.createElement('img');
-    img.src = toFileUrl(item.path);
+    const viewPath = item.preview_path || item.path;
+    img.src = item.preview_path ? toFileUrl(viewPath) : makePlaceholder(item.asset_id);
     img.alt = item.asset_id;
 
     const meta = document.createElement('div');
@@ -102,6 +112,7 @@ function renderGallery() {
       <div><b>${item.asset_id}</b></div>
       <div>score: ${item.score}</div>
       <div>現在: ★${item.star}</div>
+      <div>${item.preview_path ? '表示: プレビュー画像' : '表示: RAW(プレビュー未検出)'}</div>
       <div>${item.reason}</div>
     `;
 

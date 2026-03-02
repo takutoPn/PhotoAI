@@ -28,6 +28,7 @@ class Job(BaseModel):
 class SelectionItem(BaseModel):
     asset_id: str
     path: str
+    preview_path: str | None = None
     score: float
     person_id: str
     cluster_id: str
