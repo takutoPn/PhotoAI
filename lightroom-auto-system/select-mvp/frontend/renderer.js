@@ -2,9 +2,21 @@ const API = 'http://localhost:8008';
 
 const runBtn = document.getElementById('runBtn');
 const output = document.getElementById('output');
+const summary = document.getElementById('summary');
+const gallery = document.getElementById('gallery');
 const catalogFile = document.getElementById('catalogFile');
 const catalogPathInput = document.getElementById('catalogPath');
 const dropzone = document.getElementById('dropzone');
+const starFilter = document.getElementById('starFilter');
+const columns = document.getElementById('columns');
+
+let currentJobId = null;
+let currentPicks = [];
+
+function toFileUrl(p) {
+  const normalized = p.replace(/\\/g, '/');
+  return encodeURI(`file:///${normalized}`);
+}
 
 function setCatalogPathFromFile(file) {
   if (!file) return;
@@ -24,7 +36,6 @@ catalogFile.addEventListener('change', (e) => {
     dropzone.classList.add('dragover');
   });
 });
-
 ['dragleave', 'drop'].forEach((eventName) => {
   dropzone.addEventListener(eventName, (e) => {
     e.preventDefault();
@@ -32,7 +43,6 @@ catalogFile.addEventListener('change', (e) => {
     dropzone.classList.remove('dragover');
   });
 });
-
 dropzone.addEventListener('drop', (e) => {
   const file = e.dataTransfer?.files?.[0];
   if (!file) return;
@@ -42,6 +52,85 @@ dropzone.addEventListener('drop', (e) => {
   }
   setCatalogPathFromFile(file);
 });
+
+function passesFilter(item, filter) {
+  if (filter === 'all') return true;
+  if (filter === '3') return item.star === 3;
+  if (filter === '1') return item.star === 1;
+  if (filter === '0') return item.star === 0;
+  if (filter === '1plus') return item.star >= 1;
+  if (filter === '3plus') return item.star >= 3;
+  return true;
+}
+
+async function setStar(assetId, star) {
+  if (!currentJobId) return;
+  const res = await fetch(`${API}/jobs/${currentJobId}/stars`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ asset_id: assetId, star })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`★更新失敗 (${res.status}): ${text}`);
+  }
+  const result = await res.json();
+  currentPicks = result.picks;
+  renderGallery();
+}
+
+function renderGallery() {
+  const filter = starFilter.value;
+  const col = Number(columns.value || 6);
+  gallery.style.gridTemplateColumns = `repeat(${col}, minmax(0, 1fr))`;
+
+  const visible = currentPicks.filter((p) => passesFilter(p, filter));
+  summary.textContent = `全${currentPicks.length}件 / 表示${visible.length}件 / ★3:${currentPicks.filter(p=>p.star===3).length} ★1:${currentPicks.filter(p=>p.star===1).length} ★0:${currentPicks.filter(p=>p.star===0).length}`;
+
+  gallery.innerHTML = '';
+  for (const item of visible) {
+    const card = document.createElement('div');
+    card.className = 'item';
+
+    const img = document.createElement('img');
+    img.src = toFileUrl(item.path);
+    img.alt = item.asset_id;
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.innerHTML = `
+      <div><b>${item.asset_id}</b></div>
+      <div>score: ${item.score}</div>
+      <div>現在: ★${item.star}</div>
+      <div>${item.reason}</div>
+    `;
+
+    const stars = document.createElement('div');
+    stars.className = 'stars';
+
+    [0, 1, 3].forEach((s) => {
+      const b = document.createElement('button');
+      b.textContent = `★${s}`;
+      if (item.star === s) b.classList.add('active');
+      b.addEventListener('click', async () => {
+        try {
+          await setStar(item.asset_id, s);
+        } catch (e) {
+          output.textContent = `エラー: ${e.message}`;
+        }
+      });
+      stars.appendChild(b);
+    });
+
+    meta.appendChild(stars);
+    card.appendChild(img);
+    card.appendChild(meta);
+    gallery.appendChild(card);
+  }
+}
+
+starFilter.addEventListener('change', renderGallery);
+columns.addEventListener('change', renderGallery);
 
 runBtn.addEventListener('click', async () => {
   try {
@@ -71,33 +160,21 @@ runBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-
-    if (!createRes.ok) {
-      const text = await createRes.text();
-      throw new Error(`ジョブ作成失敗 (${createRes.status}): ${text}`);
-    }
-
+    if (!createRes.ok) throw new Error(`ジョブ作成失敗 (${createRes.status})`);
     const job = await createRes.json();
 
-    const runRes = await fetch(`${API}/jobs/${job.id}/run`, {
-      method: 'POST'
-    });
-
+    const runRes = await fetch(`${API}/jobs/${job.id}/run`, { method: 'POST' });
     if (!runRes.ok) {
       const text = await runRes.text();
       throw new Error(`ジョブ実行失敗 (${runRes.status}): ${text}`);
     }
 
     const result = await runRes.json();
+    currentJobId = result.job_id;
+    currentPicks = result.picks;
+    renderGallery();
 
-    const picked = result.picks.filter((p) => p.pick).slice(0, 30);
-    output.textContent = JSON.stringify({
-      jobId: result.job_id,
-      totalAssets: result.total_assets,
-      pickedCount: result.picked_assets,
-      warnings: result.warnings,
-      topPicked: picked
-    }, null, 2);
+    output.textContent = `完了: job=${result.job_id}\n画像総数=${result.total_assets}\n★3採用=${result.picked_assets}\n警告=${(result.warnings || []).join(', ') || 'なし'}`;
   } catch (e) {
     output.textContent = `エラー: ${e.message}\n\n対処:\n1) Backend(uvicorn)が起動しているか\n2) http://localhost:8008/health が開けるか\n3) Windows Defender/Firewallでブロックされていないか`;
   }

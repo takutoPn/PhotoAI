@@ -5,21 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lightroom Select MVP</title>
     <style>
-      body { font-family: sans-serif; margin: 24px; background: #111; color: #eee; }
+      body { font-family: sans-serif; margin: 18px; background: #111; color: #eee; }
       h1 { margin-bottom: 8px; }
-      .muted { color: #aaa; margin-bottom: 16px; }
-      .card { border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-      input { width: 100%; margin: 4px 0 10px; padding: 8px; background: #222; border: 1px solid #444; color: #fff; box-sizing: border-box; }
-      button { background: #4a8; color: #fff; border: 0; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
-      pre { white-space: pre-wrap; background: #1a1a1a; padding: 12px; border-radius: 6px; max-height: 380px; overflow: auto; }
-      .dropzone { border: 2px dashed #555; border-radius: 8px; padding: 14px; margin-bottom: 10px; text-align: center; color: #bbb; }
+      .muted { color: #aaa; margin-bottom: 12px; }
+      .card { border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+      input, select { width: 100%; margin: 4px 0 10px; padding: 8px; background: #222; border: 1px solid #444; color: #fff; box-sizing: border-box; }
+      button { background: #4a8; color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+      .dropzone { border: 2px dashed #555; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: center; color: #bbb; }
       .dropzone.dragover { border-color: #4a8; color: #cfe; }
-      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+      .toolbar { display: grid; grid-template-columns: 180px 180px 1fr; gap: 10px; align-items: end; }
+      #gallery { display: grid; gap: 10px; }
+      .item { border: 1px solid #2e2e2e; border-radius: 8px; overflow: hidden; background: #181818; }
+      .item img { width: 100%; display: block; background: #000; max-height: 280px; object-fit: cover; }
+      .meta { padding: 8px; font-size: 12px; }
+      .stars button { margin-right: 6px; background: #333; }
+      .stars button.active { background: #d18b00; }
+      #output { white-space: pre-wrap; background: #1a1a1a; padding: 10px; border-radius: 6px; }
     </style>
   </head>
   <body>
     <h1>Lightroom セレクトMVP</h1>
-    <div class="muted">.lrcat を選択/ドロップして、自動セレクトを実行</div>
+    <div class="muted">★3=採用 / ★1=次点 / ★0=非採用</div>
 
     <div class="card">
       <label>案件名</label>
@@ -31,25 +38,45 @@
       <input id="catalogPath" placeholder="選択されたパスが入ります" />
 
       <div class="row">
-        <div>
-          <label>最終セレクト枚数</label>
-          <input id="targetPicks" type="number" value="30" min="1" />
-        </div>
-        <div>
-          <label>1人あたり上限</label>
-          <input id="maxPerPerson" type="number" value="3" min="1" />
-        </div>
+        <div><label>最終セレクト枚数</label><input id="targetPicks" type="number" value="30" min="1" /></div>
+        <div><label>1人あたり上限</label><input id="maxPerPerson" type="number" value="3" min="1" /></div>
+        <div><label>1クラスタ上限</label><input id="maxPerCluster" type="number" value="1" min="1" /></div>
       </div>
-
-      <label>1クラスタあたり上限</label>
-      <input id="maxPerCluster" type="number" value="1" min="1" />
 
       <button id="runBtn">ジョブ作成して実行</button>
     </div>
 
+    <div class="card toolbar">
+      <div>
+        <label>表示フィルタ</label>
+        <select id="starFilter">
+          <option value="all">全件</option>
+          <option value="3">★3のみ</option>
+          <option value="1">★1のみ</option>
+          <option value="0">★0のみ</option>
+          <option value="1plus">★1以上</option>
+          <option value="3plus">★3のみ(採用)</option>
+        </select>
+      </div>
+      <div>
+        <label>1行の枚数</label>
+        <select id="columns">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6" selected>6</option>
+        </select>
+      </div>
+      <div id="summary" class="muted"></div>
+    </div>
+
+    <div id="gallery"></div>
+
     <div class="card">
-      <h3>結果</h3>
-      <pre id="output">まだ実行されていません。</pre>
+      <h3>ログ</h3>
+      <div id="output">まだ実行されていません。</div>
     </div>
 
     <script src="renderer.js"></script>

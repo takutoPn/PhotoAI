@@ -27,10 +27,12 @@ class Job(BaseModel):
 
 class SelectionItem(BaseModel):
     asset_id: str
+    path: str
     score: float
     person_id: str
     cluster_id: str
     pick: bool
+    star: int = Field(default=0, ge=0, le=3)
     reason: str
 
 
@@ -40,3 +42,8 @@ class JobResult(BaseModel):
     total_assets: int = 0
     picked_assets: int = 0
     warnings: List[str] = Field(default_factory=list)
+
+
+class StarUpdateRequest(BaseModel):
+    asset_id: str
+    star: int = Field(ge=0, le=3)

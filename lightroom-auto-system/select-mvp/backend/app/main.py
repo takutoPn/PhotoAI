@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
-from .schemas import Job, JobCreate, JobResult
+from .schemas import Job, JobCreate, JobResult, StarUpdateRequest
 from .selector import run_selection
 from .catalog import parse_catalog_assets
 
@@ -72,7 +72,7 @@ def run_job(job_id: str):
             job_id=job_id,
             picks=picks,
             total_assets=len(asset_paths),
-            picked_assets=sum(1 for p in picks if p.pick),
+            picked_assets=sum(1 for p in picks if p.star == 3),
             warnings=warnings,
         )
         results[job_id] = result
@@ -89,3 +89,32 @@ def get_selections(job_id: str):
     if not result:
         raise HTTPException(status_code=404, detail="result not found")
     return result
+
+
+@app.patch("/jobs/{job_id}/stars", response_model=JobResult)
+def update_star(job_id: str, payload: StarUpdateRequest):
+    result = results.get(job_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="result not found")
+
+    found = False
+    updated = []
+    for item in result.picks:
+        if item.asset_id == payload.asset_id:
+            found = True
+            star = payload.star
+            updated.append(item.model_copy(update={"star": star, "pick": star == 3}))
+        else:
+            updated.append(item)
+
+    if not found:
+        raise HTTPException(status_code=404, detail="asset not found")
+
+    new_result = result.model_copy(
+        update={
+            "picks": updated,
+            "picked_assets": sum(1 for p in updated if p.star == 3),
+        }
+    )
+    results[job_id] = new_result
+    return new_result
