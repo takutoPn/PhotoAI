@@ -650,6 +650,12 @@ export default function Home() {
                   <h2 style={{ marginTop: 14 }}>次の予定</h2>
                   <p>{nextEvent ? `${formatClock(nextEvent.start, nextEvent.allDay)} ${nextEvent.summary}` : "なし"}</p>
                 </section>
+                <section className="card intent-box">
+                  <h2>興味ありそうなこと</h2>
+                  <ul>
+                    {inferredIntents.map((line, i) => <li key={i}>{line}</li>)}
+                  </ul>
+                </section>
               </div>
             </>
           ) : null}
