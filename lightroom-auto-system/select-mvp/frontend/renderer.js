@@ -9,9 +9,14 @@ const catalogPathInput = document.getElementById('catalogPath');
 const dropzone = document.getElementById('dropzone');
 const starFilter = document.getElementById('starFilter');
 const columns = document.getElementById('columns');
+const loadMoreBtn = document.getElementById('loadMoreBtn');
 
 let currentJobId = null;
 let currentPicks = [];
+let currentVisible = [];
+let renderedCount = 0;
+
+const PAGE_SIZE = 120;
 
 function toFileUrl(p) {
   const normalized = p.replace(/\\/g, '/');
@@ -33,33 +38,49 @@ function setCatalogPathFromFile(file) {
   catalogPathInput.value = realPath;
 }
 
+function setDragover(isOn) {
+  if (isOn) dropzone.classList.add('dragover');
+  else dropzone.classList.remove('dragover');
+}
+
 catalogFile.addEventListener('change', (e) => {
   const file = e.target.files?.[0];
   setCatalogPathFromFile(file);
+});
+
+// Electronで外側にドロップしたときのナビゲーション暴発を抑止
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+});
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
 });
 
 ['dragenter', 'dragover'].forEach((eventName) => {
   dropzone.addEventListener(eventName, (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dropzone.classList.add('dragover');
+    setDragover(true);
   });
 });
 ['dragleave', 'drop'].forEach((eventName) => {
   dropzone.addEventListener(eventName, (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dropzone.classList.remove('dragover');
+    setDragover(false);
   });
 });
+
 dropzone.addEventListener('drop', (e) => {
-  const file = e.dataTransfer?.files?.[0];
-  if (!file) return;
-  if (!file.name.toLowerCase().endsWith('.lrcat')) {
+  const files = Array.from(e.dataTransfer?.files || []);
+  if (!files.length) return;
+
+  const lrcat = files.find((f) => f.name?.toLowerCase().endsWith('.lrcat'));
+  if (!lrcat) {
     output.textContent = 'エラー: .lrcat ファイルを指定してください';
     return;
   }
-  setCatalogPathFromFile(file);
+  setCatalogPathFromFile(lrcat);
 });
 
 function passesFilter(item, filter) {
@@ -85,63 +106,84 @@ async function setStar(assetId, star) {
   }
   const result = await res.json();
   currentPicks = result.picks;
-  renderGallery();
+  renderGallery(true);
 }
 
-function renderGallery() {
+function buildCard(item) {
+  const card = document.createElement('div');
+  card.className = 'item';
+
+  const img = document.createElement('img');
+  const viewPath = item.preview_path || item.path;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.src = item.preview_path ? toFileUrl(viewPath) : makePlaceholder(item.asset_id);
+  img.alt = item.asset_id;
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.innerHTML = `
+    <div><b>${item.asset_id}</b></div>
+    <div>score: ${item.score}</div>
+    <div>現在: ★${item.star}</div>
+    <div>${item.preview_path ? '表示: プレビュー画像' : '表示: RAW(プレビュー未検出)'}</div>
+    <div>${item.reason}</div>
+  `;
+
+  const stars = document.createElement('div');
+  stars.className = 'stars';
+
+  [0, 1, 3].forEach((s) => {
+    const b = document.createElement('button');
+    b.textContent = `★${s}`;
+    if (item.star === s) b.classList.add('active');
+    b.addEventListener('click', async () => {
+      try {
+        await setStar(item.asset_id, s);
+      } catch (e) {
+        output.textContent = `エラー: ${e.message}`;
+      }
+    });
+    stars.appendChild(b);
+  });
+
+  meta.appendChild(stars);
+  card.appendChild(img);
+  card.appendChild(meta);
+  return card;
+}
+
+function renderChunk(reset = false) {
+  if (reset) {
+    gallery.innerHTML = '';
+    renderedCount = 0;
+  }
+
+  const end = Math.min(renderedCount + PAGE_SIZE, currentVisible.length);
+  const frag = document.createDocumentFragment();
+  for (let i = renderedCount; i < end; i += 1) {
+    frag.appendChild(buildCard(currentVisible[i]));
+  }
+  gallery.appendChild(frag);
+  renderedCount = end;
+
+  loadMoreBtn.style.display = renderedCount < currentVisible.length ? 'inline-block' : 'none';
+}
+
+function renderGallery(reset = false) {
   const filter = starFilter.value;
   const col = Number(columns.value || 6);
   gallery.style.gridTemplateColumns = `repeat(${col}, minmax(0, 1fr))`;
 
-  const visible = currentPicks.filter((p) => passesFilter(p, filter));
-  summary.textContent = `全${currentPicks.length}件 / 表示${visible.length}件 / ★3:${currentPicks.filter(p=>p.star===3).length} ★1:${currentPicks.filter(p=>p.star===1).length} ★0:${currentPicks.filter(p=>p.star===0).length}`;
+  currentVisible = currentPicks.filter((p) => passesFilter(p, filter));
+  summary.textContent = `全${currentPicks.length}件 / 表示${currentVisible.length}件 / ★3:${currentPicks.filter(p=>p.star===3).length} ★1:${currentPicks.filter(p=>p.star===1).length} ★0:${currentPicks.filter(p=>p.star===0).length}`;
 
-  gallery.innerHTML = '';
-  for (const item of visible) {
-    const card = document.createElement('div');
-    card.className = 'item';
-
-    const img = document.createElement('img');
-    const viewPath = item.preview_path || item.path;
-    img.src = item.preview_path ? toFileUrl(viewPath) : makePlaceholder(item.asset_id);
-    img.alt = item.asset_id;
-
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    meta.innerHTML = `
-      <div><b>${item.asset_id}</b></div>
-      <div>score: ${item.score}</div>
-      <div>現在: ★${item.star}</div>
-      <div>${item.preview_path ? '表示: プレビュー画像' : '表示: RAW(プレビュー未検出)'}</div>
-      <div>${item.reason}</div>
-    `;
-
-    const stars = document.createElement('div');
-    stars.className = 'stars';
-
-    [0, 1, 3].forEach((s) => {
-      const b = document.createElement('button');
-      b.textContent = `★${s}`;
-      if (item.star === s) b.classList.add('active');
-      b.addEventListener('click', async () => {
-        try {
-          await setStar(item.asset_id, s);
-        } catch (e) {
-          output.textContent = `エラー: ${e.message}`;
-        }
-      });
-      stars.appendChild(b);
-    });
-
-    meta.appendChild(stars);
-    card.appendChild(img);
-    card.appendChild(meta);
-    gallery.appendChild(card);
-  }
+  renderChunk(true);
 }
 
-starFilter.addEventListener('change', renderGallery);
-columns.addEventListener('change', renderGallery);
+starFilter.addEventListener('change', () => renderGallery(true));
+columns.addEventListener('change', () => renderGallery(true));
+loadMoreBtn.addEventListener('click', () => renderChunk(false));
 
 runBtn.addEventListener('click', async () => {
   try {
@@ -183,7 +225,7 @@ runBtn.addEventListener('click', async () => {
     const result = await runRes.json();
     currentJobId = result.job_id;
     currentPicks = result.picks;
-    renderGallery();
+    renderGallery(true);
 
     output.textContent = `完了: job=${result.job_id}\n画像総数=${result.total_assets}\n★3採用=${result.picked_assets}\n警告=${(result.warnings || []).join(', ') || 'なし'}`;
   } catch (e) {
