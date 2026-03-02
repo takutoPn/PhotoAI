@@ -9,27 +9,40 @@
       h1 { margin-bottom: 8px; }
       .muted { color: #aaa; margin-bottom: 16px; }
       .card { border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-      input { width: 100%; margin: 4px 0 10px; padding: 8px; background: #222; border: 1px solid #444; color: #fff; }
+      input { width: 100%; margin: 4px 0 10px; padding: 8px; background: #222; border: 1px solid #444; color: #fff; box-sizing: border-box; }
       button { background: #4a8; color: #fff; border: 0; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
       pre { white-space: pre-wrap; background: #1a1a1a; padding: 12px; border-radius: 6px; max-height: 380px; overflow: auto; }
+      .dropzone { border: 2px dashed #555; border-radius: 8px; padding: 14px; margin-bottom: 10px; text-align: center; color: #bbb; }
+      .dropzone.dragover { border-color: #4a8; color: #cfe; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     </style>
   </head>
   <body>
-    <h1>Lightroom Select MVP</h1>
-    <div class="muted">Catalogアップロード前提（PoC API接続）</div>
+    <h1>Lightroom セレクトMVP</h1>
+    <div class="muted">.lrcat を選択/ドロップして、自動セレクトを実行</div>
 
     <div class="card">
-      <label>Project Name</label>
+      <label>案件名</label>
       <input id="projectName" value="Wedding A" />
 
-      <label>Catalog Path (.lrcat)</label>
-      <input id="catalogPath" value="C:/jobs/wedding_a/catalog.lrcat" />
+      <label>Catalogファイル (.lrcat)</label>
+      <div id="dropzone" class="dropzone">ここに .lrcat をドラッグ&ドロップ</div>
+      <input id="catalogFile" type="file" accept=".lrcat" />
+      <input id="catalogPath" placeholder="選択されたパスが入ります" />
 
-      <label>Max per person</label>
-      <input id="maxPerPerson" type="number" value="3" />
+      <div class="row">
+        <div>
+          <label>最終セレクト枚数</label>
+          <input id="targetPicks" type="number" value="30" min="1" />
+        </div>
+        <div>
+          <label>1人あたり上限</label>
+          <input id="maxPerPerson" type="number" value="3" min="1" />
+        </div>
+      </div>
 
-      <label>Max per cluster</label>
-      <input id="maxPerCluster" type="number" value="1" />
+      <label>1クラスタあたり上限</label>
+      <input id="maxPerCluster" type="number" value="1" min="1" />
 
       <button id="runBtn">ジョブ作成して実行</button>
     </div>

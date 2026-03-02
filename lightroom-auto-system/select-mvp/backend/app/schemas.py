@@ -5,6 +5,7 @@ from typing import List, Literal
 class SelectionRules(BaseModel):
     max_per_person: int = Field(default=3, ge=1, le=30)
     max_per_cluster: int = Field(default=1, ge=1, le=10)
+    target_picks: int = Field(default=30, ge=1, le=5000)
     quality_weight: float = 0.5
     face_weight: float = 0.3
     diversity_weight: float = 0.2

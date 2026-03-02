@@ -33,14 +33,18 @@ def run_selection(asset_paths: list[str], rules: SelectionRules):
     per_cluster = defaultdict(int)
     picks: list[SelectionItem] = []
 
+    picked_count = 0
+
     for a in enriched:
+        under_total_cap = picked_count < rules.target_picks
         ok_person = per_person[a["person_id"]] < rules.max_per_person
         ok_cluster = per_cluster[a["cluster_id"]] < rules.max_per_cluster
-        pick = ok_person and ok_cluster
+        pick = under_total_cap and ok_person and ok_cluster
 
         if pick:
             per_person[a["person_id"]] += 1
             per_cluster[a["cluster_id"]] += 1
+            picked_count += 1
 
         picks.append(
             SelectionItem(

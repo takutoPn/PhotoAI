@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
 from .schemas import Job, JobCreate, JobResult
 from .selector import run_selection
 from .catalog import parse_catalog_assets
 
 app = FastAPI(title="Lightroom Select MVP API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 jobs: dict[str, Job] = {}
 results: dict[str, JobResult] = {}
