@@ -377,6 +377,48 @@ pre {
   background: #fff;
 }
 
+.token-hero {
+  background: linear-gradient(165deg, #111111, #1a1a1a);
+}
+
+.token-percent {
+  font-size: 3rem;
+  font-weight: 800;
+  margin: 6px 0 10px;
+}
+
+.token-bar-wrap {
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  overflow: hidden;
+  height: 14px;
+}
+
+.token-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #9f1500, #e14b34);
+}
+
+.token-kpis {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.token-kpis div {
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  padding: 8px;
+  background: var(--surface-2);
+}
+
+.token-kpis span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 textarea {
   width: 100%;
   border-radius: 8px;

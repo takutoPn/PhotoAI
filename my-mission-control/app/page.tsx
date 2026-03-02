@@ -722,17 +722,27 @@ export default function Home() {
 
           {activePage === "token" ? (
             <div>
+              <section className="card token-hero">
+                <h2>トークン使用率</h2>
+                <div className="token-percent">{tokenUsagePct}%</div>
+                <div className="token-bar-wrap"><div className="token-bar" style={{ width: `${tokenUsagePct}%` }} /></div>
+                <div className="token-kpis">
+                  <div><span>Used</span><b>{usage.tokens ?? "-"}</b></div>
+                  <div><span>Limit</span><b>{maxTokens || "-"}</b></div>
+                  <div><span>Cost</span><b>{usage.cost ?? "-"}</b></div>
+                  <div><span>Model</span><b>{usage.model ?? "-"}</b></div>
+                </div>
+              </section>
+
               <section className="card">
-                <h2>トークン</h2>
+                <h3>基本設定</h3>
                 <div className="row">
                   <input value={tokenLimit} onChange={(e) => setTokenLimit(e.target.value)} placeholder="上限トークン数 (例: 1000000)" />
                 </div>
-                <textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} />
-                <div className="row"><span>Used: <b>{usage.tokens ?? "-"}</b></span><span>Limit: <b>{maxTokens || "-"}</b></span><span>Usage: <b>{tokenUsagePct}%</b></span></div>
-                <div className="row"><span>Cost: <b>{usage.cost ?? "-"}</b></span><span>Model: <b>{usage.model ?? "-"}</b></span></div>
-                <div style={{ marginTop: 10, border: "1px solid var(--outline)", borderRadius: 10, overflow: "hidden" }}>
-                  <div style={{ height: 12, width: `${tokenUsagePct}%`, background: "#9f1500" }} />
-                </div>
+                <details style={{ marginTop: 10 }}>
+                  <summary>詳細設定（/status 貼り付け）</summary>
+                  <textarea value={usageRaw} onChange={(e) => setUsageRaw(e.target.value)} placeholder="/status の出力を貼り付け" rows={6} />
+                </details>
               </section>
             </div>
           ) : null}
