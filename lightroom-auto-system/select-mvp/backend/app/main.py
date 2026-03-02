@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
+from pathlib import Path
 from .schemas import Job, JobCreate, JobResult, StarUpdateRequest
 from .selector import run_selection
 from .catalog import parse_catalog_assets
@@ -66,7 +67,8 @@ def run_job(job_id: str):
         asset_paths = parse_catalog_assets(job.catalog_path)
         if not asset_paths:
             warnings.append("画像が見つかりませんでした")
-        picks = run_selection(asset_paths, job.rules)
+        preview_cache_dir = str(Path(job.catalog_path).parent / ".select_mvp_cache" / "previews")
+        picks = run_selection(asset_paths, job.rules, preview_cache_dir=preview_cache_dir)
 
         result = JobResult(
             job_id=job_id,

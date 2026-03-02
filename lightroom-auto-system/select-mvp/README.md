@@ -33,6 +33,8 @@ python -m venv .venv
 # macOS/Linux
 source .venv/bin/activate
 pip install -r requirements.txt
+# RAW(ARW等)の自動プレビュー生成を有効化したい場合(推奨)
+pip install rawpy
 python -m uvicorn app.main:app --reload --port 8008
 ```
 

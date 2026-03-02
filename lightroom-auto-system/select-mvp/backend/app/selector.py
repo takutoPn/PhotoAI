@@ -7,7 +7,7 @@ from .quality import extract_features
 from .preview import resolve_preview_path
 
 
-def run_selection(asset_paths: list[str], rules: SelectionRules):
+def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_dir: str | None = None):
     enriched = []
     for idx, path in enumerate(asset_paths):
         f = extract_features(path, idx)
@@ -75,7 +75,7 @@ def run_selection(asset_paths: list[str], rules: SelectionRules):
             SelectionItem(
                 asset_id=a["asset_id"],
                 path=a["path"],
-                preview_path=resolve_preview_path(a["path"]),
+                preview_path=resolve_preview_path(a["path"], preview_cache_dir=preview_cache_dir),
                 score=round(a["score"], 4),
                 person_id=a["person_id"],
                 cluster_id=a["cluster_id"],
