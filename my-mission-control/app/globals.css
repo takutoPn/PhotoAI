@@ -368,6 +368,15 @@ pre {
   font-size: 0.8rem;
 }
 
+.calendar-embed {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 640px;
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  background: #fff;
+}
+
 textarea {
   width: 100%;
   border-radius: 8px;

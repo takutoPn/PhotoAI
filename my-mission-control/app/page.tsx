@@ -508,6 +508,9 @@ export default function Home() {
 
   const todayEvents = eventsByDay.get(todayKey) ?? [];
   const tomorrowEvents = eventsByDay.get(tomorrowKey) ?? [];
+  const nextEvent = [...events]
+    .filter((e) => new Date(e.start).getTime() >= Date.now())
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())[0];
   const bottlenecks = [...cycles].sort((a, b) => b.minutes - a.minutes).slice(0, 3);
 
   const inferredIntents = useMemo(() => {
@@ -598,10 +601,14 @@ export default function Home() {
                   </div>
                 </section>
                 <section className="card intent-box">
-                  <h2>やりたそうなこと</h2>
+                  <h2>今日の予定</h2>
                   <ul>
-                    {inferredIntents.map((line, i) => <li key={i}>{line}</li>)}
+                    {(todayEvents.length ? todayEvents : [{ id: "none", summary: "予定なし", start: new Date().toISOString(), calendarId: "none" } as any]).slice(0, 3).map((e: any, i) => (
+                      <li key={e.id ?? i}>{e.summary === "予定なし" ? "予定なし" : `${formatClock(e.start, e.allDay)} ${e.summary}`}</li>
+                    ))}
                   </ul>
+                  <h2 style={{ marginTop: 14 }}>次の予定</h2>
+                  <p>{nextEvent ? `${formatClock(nextEvent.start, nextEvent.allDay)} ${nextEvent.summary}` : "なし"}</p>
                 </section>
               </div>
             </>
@@ -686,7 +693,7 @@ export default function Home() {
           {activePage === "calendar" ? (
             <div>
               <section className="card">
-                <h2>カレンダー</h2>
+                <h2>カレンダー（データ連携）</h2>
                 <div className="row"><button onClick={loadEvents} disabled={status !== "authenticated" || loadingCalendar}>{loadingCalendar ? "読込中..." : "予定を更新"}</button></div>
                 {calendarError ? <p className="error">{calendarError}</p> : null}
                 {calendarWarning ? <p className="warn">{calendarWarning}</p> : null}
