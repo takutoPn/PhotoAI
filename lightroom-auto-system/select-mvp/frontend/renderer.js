@@ -182,6 +182,17 @@ historyDropzone.addEventListener('drop', async (e) => {
   setHistoryCatalogPath(path);
 });
 
+[dropzone, historyDropzone].forEach((zone) => {
+  zone.addEventListener('click', () => {
+    if (zone === dropzone) catalogFile.click();
+    else historyCatalogFile.click();
+  });
+  zone.addEventListener('dblclick', () => {
+    if (zone === dropzone) catalogFile.click();
+    else historyCatalogFile.click();
+  });
+});
+
 function passesFilter(item, filter) {
   if (filter === 'all') return true;
   if (filter === '3') return item.star === 3;

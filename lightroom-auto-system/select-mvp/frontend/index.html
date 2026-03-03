@@ -11,8 +11,9 @@
       .card { border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
       input, select { width: 100%; margin: 4px 0 10px; padding: 8px; background: #222; border: 1px solid #444; color: #fff; box-sizing: border-box; }
       button { background: #4a8; color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-      .dropzone { border: 2px dashed #555; border-radius: 8px; padding: 10px; margin-bottom: 10px; text-align: center; color: #bbb; }
+      .dropzone { border: 2px dashed #555; border-radius: 8px; padding: 12px; margin-bottom: 10px; text-align: center; color: #bbb; cursor: pointer; user-select: none; }
       .dropzone.dragover { border-color: #4a8; color: #cfe; }
+      .file-input-hidden { display: none; }
       .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
       .toolbar { display: grid; grid-template-columns: 180px 180px 1fr; gap: 10px; align-items: end; }
       #gallery { display: grid; gap: 10px; }
@@ -32,8 +33,10 @@
       <input id="projectName" value="Wedding A" />
 
       <label>Catalogファイル (.lrcat)</label>
-      <div id="dropzone" class="dropzone">ここに .lrcat をドラッグ&ドロップ</div>
-      <input id="catalogFile" type="file" accept=".lrcat" />
+      <div id="dropzone" class="dropzone" title="クリック/ダブルクリックでファイル選択">
+        ここに .lrcat をドラッグ&ドロップ<br/>またはクリックしてファイルを選択
+      </div>
+      <input id="catalogFile" class="file-input-hidden" type="file" accept=".lrcat" />
       <input id="catalogPath" placeholder="選択されたパスが入ります" />
 
       <div class="row">
@@ -74,8 +77,10 @@
       </div>
       <div style="margin-top:10px;">
         <label>学習取り込み用Catalog (.lrcat)</label>
-        <div id="historyDropzone" class="dropzone">ここに過去 .lrcat をドラッグ&ドロップ</div>
-        <input id="historyCatalogFile" type="file" accept=".lrcat" />
+        <div id="historyDropzone" class="dropzone" title="クリック/ダブルクリックでファイル選択">
+          ここに過去 .lrcat をドラッグ&ドロップ<br/>またはクリックしてファイルを選択
+        </div>
+        <input id="historyCatalogFile" class="file-input-hidden" type="file" accept=".lrcat" />
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
           <input id="historyCatalogPath" placeholder="過去Catalog(.lrcat)のパスを指定" style="max-width:520px;" />
           <button id="importHistoryBtn" type="button" style="background:#468;">過去セレクト/レタッチ履歴を学習に取り込む</button>
