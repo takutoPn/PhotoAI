@@ -78,9 +78,32 @@ def _title_id(title_or_name: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:12]
 
 
+def _source_id(catalog_path: str, title_or_name: str) -> str:
+    base = f"{(catalog_path or '').strip().lower()}|{(title_or_name or '').strip().lower()}"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
+
+
 def _append_learning_index(entry: dict):
     with LEARNING_INDEX_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def _upsert_learning_index(entry: dict, key: str = "source_id"):
+    rows = _read_learning_index(limit=100000)
+    matched = False
+    kval = entry.get(key)
+    for i, r in enumerate(rows):
+        if kval and r.get(key) == kval:
+            rows[i] = {**r, **entry}
+            matched = True
+            break
+    if not matched:
+        rows.append(entry)
+
+    LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with LEARNING_INDEX_PATH.open("w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
 def _read_learning_index(limit: int = 200) -> list[dict]:
@@ -373,6 +396,7 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
 
     source_title = (payload.learning_title or "").strip() or Path(catalog_path).stem
     tid = _title_id(source_title)
+    sid = _source_id(catalog_path, source_title)
 
     event = {
         "ts": datetime.utcnow().isoformat() + "Z",
@@ -380,6 +404,7 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
         "job_id": None,
         "project_name": "historical-import",
         "title_id": tid,
+        "source_id": sid,
         "share_learning": bool(payload.share_learning),
         "rules": {"rating_profile": profile},
         # 個人情報/生データ回避: パスは保存しない
@@ -388,7 +413,8 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
 
     try:
         _append_encrypted_event(out_path, event)
-        _append_learning_index({
+        _upsert_learning_index({
+            "source_id": sid,
             "title_id": tid,
             "uploaded_at": event["ts"],
             "capture_date": "-",
@@ -406,4 +432,5 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
         "share_learning": bool(payload.share_learning),
         "external_shared": False,
         "title_id": tid,
+        "source_id": sid,
     }

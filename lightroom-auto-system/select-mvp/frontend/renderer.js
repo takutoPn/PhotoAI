@@ -369,7 +369,12 @@ async function refreshLearningHistory() {
       </tr>
     `).join('');
   } catch (e) {
-    learningHistoryBody.innerHTML = `<tr><td colspan="4">履歴取得エラー: ${e.message}</td></tr>`;
+    const msg = String(e.message || e);
+    if (msg.includes('Not Found')) {
+      learningHistoryBody.innerHTML = `<tr><td colspan="4">履歴取得エラー: backendが古い可能性があります（/learning/history 未反映）</td></tr>`;
+    } else {
+      learningHistoryBody.innerHTML = `<tr><td colspan="4">履歴取得エラー: ${msg}</td></tr>`;
+    }
   }
 }
 
