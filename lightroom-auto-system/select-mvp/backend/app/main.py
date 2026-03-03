@@ -24,6 +24,10 @@ app.add_middleware(
 jobs: dict[str, Job] = {}
 results: dict[str, JobResult] = {}
 
+# 学習データはCatalog側ではなく backend 配下に集約保存する
+LEARNING_DATA_DIR = Path(__file__).resolve().parents[1] / "learning_data"
+LEARNING_DATA_PATH = LEARNING_DATA_DIR / "learning_events.jsonl"
+
 
 def _safe_learning_item_from_pick(item):
     ext = Path(item.path).suffix.lower().lstrip('.')
@@ -166,9 +170,8 @@ def learn_from_job(job_id: str):
     if not job or not result:
         raise HTTPException(status_code=404, detail="job/result not found")
 
-    data_dir = Path(job.catalog_path).parent / ".select_mvp_cache"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    out_path = data_dir / "learning_events.jsonl"
+    LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = LEARNING_DATA_PATH
 
     payload = {
         "ts": datetime.utcnow().isoformat() + "Z",
@@ -188,9 +191,8 @@ def learn_from_job(job_id: str):
 @app.post("/learning/import_catalog")
 def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
     catalog_path = payload.catalog_path
-    data_dir = Path(catalog_path).parent / ".select_mvp_cache"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    out_path = data_dir / "learning_events.jsonl"
+    LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = LEARNING_DATA_PATH
 
     try:
         items = extract_existing_ratings_for_learning(
