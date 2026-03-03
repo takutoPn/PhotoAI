@@ -1,5 +1,7 @@
 # PhotoAI Workspace Backup
 
+![PhotoAI preview](./assets/photoai-preview.png)
+
 このリポジトリは PhotoAI / Lightroom 選別まわりの開発バックアップです。
 
 ## 目的
