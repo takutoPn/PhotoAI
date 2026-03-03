@@ -1,8 +1,8 @@
-# PhotoAI
+# Selectra AI
 
-![PhotoAI preview](./lightroom-auto-system/img/top.png)
+![Selectra AI preview](./lightroom-auto-system/img/top.png)
 
-PhotoAI は Lightroom カタログをもとに、写真セレクトと学習データ蓄積を行うプロジェクトです。
+Selectra AI は Lightroom カタログをもとに、写真セレクトと学習データ蓄積を行うプロジェクトです。
 
 ## Features
 - Lightroom Catalog (`.lrcat`) の読み込み（D&D / ファイル選択）

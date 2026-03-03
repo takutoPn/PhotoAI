@@ -1,4 +1,4 @@
-# Select MVP (Lightroom Catalog Upload)
+# Selectra AI (Lightroom Catalog Upload)
 
 Lightroomカタログアップロード前提の「自動セレクト」MVPです。
 

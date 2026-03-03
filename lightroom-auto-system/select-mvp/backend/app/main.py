@@ -14,7 +14,7 @@ from .selector import run_selection
 from .catalog import parse_catalog_assets
 from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning
 
-app = FastAPI(title="Lightroom Select MVP API", version="0.1.0")
+app = FastAPI(title="Selectra AI API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
