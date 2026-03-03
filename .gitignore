@@ -37,3 +37,15 @@ Thumbs.db
 
 # Media and large local assets (keep repo code-focused)
 media/
+
+# Lightroom/selection runtime caches
+**/.select_mvp_cache/
+*.dng
+*.cr2
+*.cr3
+*.nef
+*.arw
+*.rw2
+*.orf
+*.tif
+*.tiff

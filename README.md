@@ -10,8 +10,10 @@
 ## 含めないもの（`.gitignore`）
 - 認証情報（`.env` など）
 - DB / Lightroomカタログ（`*.db`, `*.lrcat`）
+- RAW/TIFFなど元画像（`*.cr2`, `*.cr3`, `*.nef`, `*.arw`, `*.dng`, `*.tif` など）
 - 仮想環境・依存キャッシュ（`.venv`, `node_modules`）
 - OpenClawローカル実行データ（`.openclaw`, `memory/`）
+- セレクト処理キャッシュ（`.select_mvp_cache/`）
 
 ## 運用ルール
 1. 作業ごとに小さくコミット

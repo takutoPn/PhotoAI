@@ -25,6 +25,26 @@ jobs: dict[str, Job] = {}
 results: dict[str, JobResult] = {}
 
 
+def _safe_learning_item_from_pick(item):
+    ext = Path(item.path).suffix.lower().lstrip('.')
+    capture_month = (item.capture_date or '')[:7] if item.capture_date else None
+    return {
+        "star": int(item.star),
+        "score": float(item.score),
+        "file_ext": ext,
+        "capture_month": capture_month,
+    }
+
+
+def _safe_learning_item_from_catalog_row(row: dict):
+    ext = Path(row.get("path") or "").suffix.lower().lstrip('.')
+    return {
+        "rating": int(row.get("rating") or 0),
+        "pick": int(row.get("pick") or 0),
+        "file_ext": ext,
+    }
+
+
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -152,11 +172,12 @@ def learn_from_job(job_id: str):
 
     payload = {
         "ts": datetime.utcnow().isoformat() + "Z",
+        "source": "job",
         "job_id": job_id,
         "project_name": job.project_name,
-        "catalog_path": job.catalog_path,
         "rules": job.rules.model_dump(),
-        "items": [p.model_dump() for p in result.picks],
+        # 個人情報/生データ回避: path, asset_id, preview_path, reason は保存しない
+        "items": [_safe_learning_item_from_pick(p) for p in result.picks],
     }
     with out_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(payload, ensure_ascii=False) + "\n")
@@ -182,11 +203,12 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
 
     event = {
         "ts": datetime.utcnow().isoformat() + "Z",
+        "source": "historical-import",
         "job_id": None,
         "project_name": "historical-import",
-        "catalog_path": catalog_path,
         "rules": {},
-        "items": items,
+        # 個人情報/生データ回避: パスは保存しない
+        "items": [_safe_learning_item_from_catalog_row(x) for x in items],
     }
 
     with out_path.open("a", encoding="utf-8") as f:
