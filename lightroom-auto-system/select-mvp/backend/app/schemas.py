@@ -32,6 +32,7 @@ class SelectionItem(BaseModel):
     score: float
     person_id: str
     cluster_id: str
+    capture_date: str | None = None
     pick: bool
     star: int = Field(default=0, ge=0, le=3)
     reason: str
@@ -48,3 +49,9 @@ class JobResult(BaseModel):
 class StarUpdateRequest(BaseModel):
     asset_id: str
     star: int = Field(ge=0, le=3)
+
+
+class ImportCatalogLearningRequest(BaseModel):
+    catalog_path: str
+    min_rating: int = Field(default=1, ge=0, le=5)
+    limit: int = Field(default=20000, ge=1, le=200000)

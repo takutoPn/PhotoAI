@@ -9,7 +9,9 @@ from .preview import resolve_preview_path
 
 def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_dir: str | None = None):
     enriched = []
+    path_to_index = {}
     for idx, path in enumerate(asset_paths):
+        path_to_index[path] = idx
         f = extract_features(path, idx)
         score = (
             f.quality_score * rules.quality_weight
@@ -22,6 +24,7 @@ def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_d
                 "path": path,
                 "person_id": f.person_id,
                 "cluster_id": f.cluster_id,
+                "capture_date": f.capture_date,
                 "score": score,
                 "reason": (
                     f"quality={f.quality_score:.2f}, face={f.face_score:.2f}, "
@@ -31,6 +34,7 @@ def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_d
         )
 
     enriched.sort(key=lambda x: x["score"], reverse=True)
+    enriched_by_path = {x["path"]: x for x in enriched}
 
     per_person = defaultdict(int)
     per_cluster = defaultdict(int)
@@ -46,17 +50,55 @@ def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_d
             per_person[a["person_id"]] += 1
             per_cluster[a["cluster_id"]] += 1
 
-    # 次点(★1): ★3数の50%を上限に上位から採用
-    star1_target = ceil(len(star3_ids) * 0.5)
+    # 次点(★1): ★3枚数の1.5〜3.0倍の範囲で採用
+    star1_target_min = ceil(len(star3_ids) * 1.5)
+    star1_target_max = ceil(len(star3_ids) * 3.0)
     star1_ids: set[str] = set()
-    for a in enriched:
-        if len(star1_ids) >= star1_target:
-            break
-        if a["asset_id"] in star3_ids:
+
+    # まずは★3前後(連番近傍)を優先
+    star3_paths = [a["path"] for a in enriched if a["asset_id"] in star3_ids]
+    for p in star3_paths:
+        idx = path_to_index.get(p)
+        if idx is None:
             continue
-        star1_ids.add(a["asset_id"])
+        for neighbor_idx in (idx - 1, idx + 1):
+            if neighbor_idx < 0 or neighbor_idx >= len(asset_paths):
+                continue
+            npath = asset_paths[neighbor_idx]
+            candidate = enriched_by_path.get(npath)
+            if not candidate:
+                continue
+            aid = candidate["asset_id"]
+            if aid in star3_ids or aid in star1_ids:
+                continue
+            star1_ids.add(aid)
+            if len(star1_ids) >= star1_target_max:
+                break
+        if len(star1_ids) >= star1_target_max:
+            break
+
+    # 不足分はスコア上位で補完（最低ラインまで埋める）
+    for a in enriched:
+        if len(star1_ids) >= star1_target_min:
+            break
+        aid = a["asset_id"]
+        if aid in star3_ids or aid in star1_ids:
+            continue
+        star1_ids.add(aid)
+
+    # さらに余力があれば star1_target_max まで高スコアから追加
+    for a in enriched:
+        if len(star1_ids) >= star1_target_max:
+            break
+        aid = a["asset_id"]
+        if aid in star3_ids or aid in star1_ids:
+            continue
+        star1_ids.add(aid)
 
     picks: list[SelectionItem] = []
+    raw_preview_budget = max(40, rules.target_picks * 2)
+    raw_preview_used = 0
+
     for a in enriched:
         if a["asset_id"] in star3_ids:
             star = 3
@@ -71,14 +113,24 @@ def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_d
             pick = False
             reason = f"★0 非採用: {a['reason']}"
 
+        should_generate_raw = (star >= 1) and (raw_preview_used < raw_preview_budget)
+        preview_path = resolve_preview_path(
+            a["path"],
+            preview_cache_dir=preview_cache_dir,
+            generate_raw=should_generate_raw,
+        )
+        if preview_path and should_generate_raw:
+            raw_preview_used += 1
+
         picks.append(
             SelectionItem(
                 asset_id=a["asset_id"],
                 path=a["path"],
-                preview_path=resolve_preview_path(a["path"], preview_cache_dir=preview_cache_dir),
+                preview_path=preview_path,
                 score=round(a["score"], 4),
                 person_id=a["person_id"],
                 cluster_id=a["cluster_id"],
+                capture_date=a.get("capture_date"),
                 pick=pick,
                 star=star,
                 reason=reason,
