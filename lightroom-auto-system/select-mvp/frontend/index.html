@@ -16,6 +16,10 @@
       .file-input-hidden { display: none; }
       .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
       .toolbar { display: grid; grid-template-columns: 180px 180px 1fr; gap: 10px; align-items: end; }
+      .top-tabs { display:flex; gap:0; margin: 0 0 10px; border-bottom:1px solid #333; }
+      .top-tab { background:#2a2a2a; border:1px solid #444; border-bottom:none; color:#ddd; padding:8px 14px; cursor:pointer; }
+      .top-tab + .top-tab { border-left:none; }
+      .top-tab.active { background:#4a8; color:#fff; }
       #gallery { display: grid; gap: 10px; }
       .item { border: 1px solid #2e2e2e; border-radius: 8px; overflow: hidden; background: #181818; }
       .item img { width: 100%; display: block; background: #000; max-height: 280px; object-fit: cover; }
@@ -27,6 +31,10 @@
   </head>
   <body>
     <h1>Selectra AI</h1>
+    <div class="top-tabs">
+      <button id="tabMainBtn" class="top-tab active" type="button">セレクト</button>
+      <button id="tabLearningBtn" class="top-tab" type="button">学習取り込み</button>
+    </div>
 
     <div class="card">
       <label>案件名</label>
@@ -76,11 +84,6 @@
         </label>
       </div>
       <div style="margin-top:10px;">
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-          <button id="tabMainBtn" type="button" style="background:#4a8;">案件セレクト</button>
-          <button id="tabLearningBtn" type="button" style="background:#444;">学習取り込み</button>
-        </div>
-
         <div id="tabMain" style="display:block;">
           <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-bottom:8px;">
             <input id="shareLearningDataMain" type="checkbox" style="width:auto; margin:0;" />

@@ -344,8 +344,8 @@ function showTab(which) {
   const main = which === 'main';
   tabMain.style.display = main ? 'block' : 'none';
   tabLearning.style.display = main ? 'none' : 'block';
-  tabMainBtn.style.background = main ? '#4a8' : '#444';
-  tabLearningBtn.style.background = main ? '#444' : '#4a8';
+  tabMainBtn.classList.toggle('active', main);
+  tabLearningBtn.classList.toggle('active', !main);
 }
 
 tabMainBtn.addEventListener('click', () => showTab('main'));
