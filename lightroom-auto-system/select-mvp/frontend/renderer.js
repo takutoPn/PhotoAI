@@ -7,7 +7,12 @@ const importHistoryBtn = document.getElementById('importHistoryBtn');
 const historyCatalogPathInput = document.getElementById('historyCatalogPath');
 const historyCatalogFile = document.getElementById('historyCatalogFile');
 const historyDropzone = document.getElementById('historyDropzone');
-const shareLearningData = document.getElementById('shareLearningData');
+const shareLearningDataMain = document.getElementById('shareLearningDataMain');
+const shareLearningDataHistory = document.getElementById('shareLearningDataHistory');
+const tabMainBtn = document.getElementById('tabMainBtn');
+const tabLearningBtn = document.getElementById('tabLearningBtn');
+const tabMain = document.getElementById('tabMain');
+const tabLearning = document.getElementById('tabLearning');
 const output = document.getElementById('output');
 const summary = document.getElementById('summary');
 const gallery = document.getElementById('gallery');
@@ -335,6 +340,18 @@ loadMoreBtn.addEventListener('click', () => renderChunk(false));
 });
 loadExportMappingPrefs();
 
+function showTab(which) {
+  const main = which === 'main';
+  tabMain.style.display = main ? 'block' : 'none';
+  tabLearning.style.display = main ? 'none' : 'block';
+  tabMainBtn.style.background = main ? '#4a8' : '#444';
+  tabLearningBtn.style.background = main ? '#444' : '#4a8';
+}
+
+tabMainBtn.addEventListener('click', () => showTab('main'));
+tabLearningBtn.addEventListener('click', () => showTab('learning'));
+showTab('main');
+
 async function exportAndMaybeOpenLightroom(jobId, catalogPath) {
   const mapping = {
     selected_star: Number(exportSelectedStar.value || 3),
@@ -385,7 +402,7 @@ learnBtn.addEventListener('click', async () => {
     const res = await fetch(`${API}/jobs/${currentJobId}/learn`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ share_learning: !!shareLearningData?.checked })
+      body: JSON.stringify({ share_learning: !!shareLearningDataMain?.checked })
     });
     if (!res.ok) throw new Error(await res.text());
     const info = await res.json();
@@ -410,7 +427,7 @@ importHistoryBtn.addEventListener('click', async () => {
         catalog_path: catalogPath,
         min_rating: 1,
         limit: 50000,
-        share_learning: !!shareLearningData?.checked
+        share_learning: !!shareLearningDataHistory?.checked
       })
     });
     if (!res.ok) throw new Error(await res.text());
