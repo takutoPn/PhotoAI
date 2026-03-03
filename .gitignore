@@ -1,0 +1,39 @@
+# Secrets / local config
+.env
+.env.*
+*.pem
+*.key
+*.p12
+
+# Databases / catalogs / binary data
+*.db
+*.sqlite
+*.sqlite3
+*.lrcat
+*.lrdata/
+
+# Python
+**/.venv/
+**/__pycache__/
+*.pyc
+
+# Node / frontend
+**/node_modules/
+
+# OpenClaw local runtime artifacts
+.openclaw/
+memory/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temp / logs
+*.log
+*.tmp
+*.bak
+
+# Media and large local assets (keep repo code-focused)
+media/
