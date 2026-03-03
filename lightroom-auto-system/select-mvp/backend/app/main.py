@@ -32,20 +32,49 @@ LEARNING_DATA_PATH = LEARNING_DATA_DIR / "learning_events.jsonl"
 def _safe_learning_item_from_pick(item):
     ext = Path(item.path).suffix.lower().lstrip('.')
     capture_month = (item.capture_date or '')[:7] if item.capture_date else None
+    star = int(item.star)
+    # アプリ内スター(0/1/3)も意図ラベルへ正規化
+    intent = "selected" if star >= 3 else ("candidate" if star >= 1 else "reject")
+    selected = 1 if star >= 3 else 0
+    priority = 2 if star >= 3 else (1 if star >= 1 else 0)
     return {
-        "star": int(item.star),
+        "star": star,
         "score": float(item.score),
         "file_ext": ext,
         "capture_month": capture_month,
+        "intent": intent,
+        "selected": selected,
+        "priority": priority,
     }
+
+
+def _infer_intent_label(rating: int, pick: int) -> dict:
+    # 案件ごとに運用が違う前提で、まずは汎用ルールで自動正規化
+    # - ★5: キーショット(集合写真など)になりやすい
+    # - ★3以上 or Pick: セレクト済み
+    if rating >= 5:
+        return {"intent": "hero", "selected": 1, "priority": 3}
+    if rating >= 3 or pick > 0:
+        return {"intent": "selected", "selected": 1, "priority": 2}
+    if rating == 2:
+        return {"intent": "candidate", "selected": 0, "priority": 1}
+    if rating == 1:
+        return {"intent": "reserve", "selected": 0, "priority": 1}
+    return {"intent": "reject", "selected": 0, "priority": 0}
 
 
 def _safe_learning_item_from_catalog_row(row: dict):
     ext = Path(row.get("path") or "").suffix.lower().lstrip('.')
+    rating = int(row.get("rating") or 0)
+    pick = int(row.get("pick") or 0)
+    inferred = _infer_intent_label(rating, pick)
     return {
-        "rating": int(row.get("rating") or 0),
-        "pick": int(row.get("pick") or 0),
+        "rating": rating,
+        "pick": pick,
         "file_ext": ext,
+        "intent": inferred["intent"],
+        "selected": inferred["selected"],
+        "priority": inferred["priority"],
     }
 
 
