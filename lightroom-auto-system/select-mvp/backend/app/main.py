@@ -4,12 +4,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
 from pathlib import Path
-import json
-from datetime import datetime
-from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest
+from .schemas import Job, JobCreate, JobResult, StarUpdateRequest
 from .selector import run_selection
 from .catalog import parse_catalog_assets
-from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning
 
 app = FastAPI(title="Lightroom Select MVP API", version="0.1.0")
 
@@ -123,73 +120,3 @@ def update_star(job_id: str, payload: StarUpdateRequest):
     )
     results[job_id] = new_result
     return new_result
-
-
-@app.post("/jobs/{job_id}/export")
-def export_to_lightroom(job_id: str):
-    job = jobs.get(job_id)
-    result = results.get(job_id)
-    if not job or not result:
-        raise HTTPException(status_code=404, detail="job/result not found")
-
-    try:
-        info = export_ratings_to_catalog(job.catalog_path, result.picks)
-        return {"ok": True, **info}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"export failed: {e}")
-
-
-@app.post("/jobs/{job_id}/learn")
-def learn_from_job(job_id: str):
-    job = jobs.get(job_id)
-    result = results.get(job_id)
-    if not job or not result:
-        raise HTTPException(status_code=404, detail="job/result not found")
-
-    data_dir = Path(job.catalog_path).parent / ".select_mvp_cache"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    out_path = data_dir / "learning_events.jsonl"
-
-    payload = {
-        "ts": datetime.utcnow().isoformat() + "Z",
-        "job_id": job_id,
-        "project_name": job.project_name,
-        "catalog_path": job.catalog_path,
-        "rules": job.rules.model_dump(),
-        "items": [p.model_dump() for p in result.picks],
-    }
-    with out_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(payload, ensure_ascii=False) + "\n")
-
-    return {"ok": True, "saved_to": str(out_path), "count": len(result.picks)}
-
-
-@app.post("/learning/import_catalog")
-def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
-    catalog_path = payload.catalog_path
-    data_dir = Path(catalog_path).parent / ".select_mvp_cache"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    out_path = data_dir / "learning_events.jsonl"
-
-    try:
-        items = extract_existing_ratings_for_learning(
-            catalog_path,
-            min_rating=payload.min_rating,
-            limit=payload.limit,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"import failed: {e}")
-
-    event = {
-        "ts": datetime.utcnow().isoformat() + "Z",
-        "job_id": None,
-        "project_name": "historical-import",
-        "catalog_path": catalog_path,
-        "rules": {},
-        "items": items,
-    }
-
-    with out_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(event, ensure_ascii=False) + "\n")
-
-    return {"ok": True, "saved_to": str(out_path), "count": len(items)}

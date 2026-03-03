@@ -1,10 +1,5 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-app.commandLine.appendSwitch('ignore-gpu-blocklist');
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-zero-copy');
+const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
-const fs = require('fs');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -15,42 +10,8 @@ function createWindow() {
     }
   });
 
-  // ファイルドロップ時にElectronがページ遷移してD&Dを潰すのを防止
-  win.webContents.on('will-navigate', (event) => {
-    event.preventDefault();
-  });
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-
   win.loadFile('index.html');
 }
-
-function findLightroomExe() {
-  const candidates = [
-    'C:/Program Files/Adobe/Adobe Lightroom Classic/Lightroom.exe',
-    'C:/Program Files/Adobe/Adobe Photoshop Lightroom Classic/Lightroom.exe',
-  ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
-  }
-  return null;
-}
-
-ipcMain.handle('open-lightroom', async (_evt, catalogPath) => {
-  const exe = findLightroomExe();
-  if (!exe) {
-    return { ok: false, error: 'Lightroom executable not found in default paths' };
-  }
-
-  try {
-    spawn(exe, [catalogPath], {
-      detached: true,
-      stdio: 'ignore',
-    }).unref();
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: String(e?.message || e) };
-  }
-});
 
 app.whenReady().then(() => {
   createWindow();

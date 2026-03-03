@@ -43,22 +43,10 @@
         <div><label>1クラスタ上限</label><input id="maxPerCluster" type="number" value="1" min="1" /></div>
       </div>
 
-      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-        <button id="runBtn">ジョブ作成して実行（表示のみ）</button>
-        <button id="saveBtn" type="button" style="background:#c85;">評価をCatalogに保存</button>
-        <button id="learnBtn" type="button" style="background:#56a;">学習データに追加</button>
-        <label style="display:flex; align-items:center; gap:6px; color:#ddd;">
-          <input id="openLightroomAfterExport" type="checkbox" checked style="width:auto; margin:0;" />
-          保存後にLightroomでCatalogを開く
-        </label>
-      </div>
-      <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
-        <input id="historyCatalogPath" placeholder="過去Catalog(.lrcat)のパスを指定" style="max-width:520px;" />
-        <button id="importHistoryBtn" type="button" style="background:#468;">過去セレクト/レタッチ履歴を学習に取り込む</button>
-      </div>
+      <button id="runBtn">ジョブ作成して実行</button>
     </div>
 
-    <div class="card toolbar" style="grid-template-columns: 180px 180px 220px 1fr;">
+    <div class="card toolbar">
       <div>
         <label>表示フィルタ</label>
         <select id="starFilter">
@@ -81,22 +69,10 @@
           <option value="6" selected>6</option>
         </select>
       </div>
-      <div>
-        <label>並び順</label>
-        <select id="sortBy">
-          <option value="star" selected>星順(デフォルト)</option>
-          <option value="date">撮影日順</option>
-          <option value="name">お名前順</option>
-          <option value="format">ファイル形式順</option>
-        </select>
-      </div>
       <div id="summary" class="muted"></div>
     </div>
 
     <div id="gallery"></div>
-    <div style="margin: 10px 0 16px; text-align: center;">
-      <button id="loadMoreBtn" style="display:none; background:#2f6; color:#111;">さらに表示</button>
-    </div>
 
     <div class="card">
       <h3>ログ</h3>
