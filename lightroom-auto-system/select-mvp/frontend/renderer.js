@@ -129,7 +129,14 @@ function isWithin(el, target) {
   return !!(el && target && (el === target || el.contains(target)));
 }
 
-window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+});
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+});
 window.addEventListener('drop', async (e) => {
   e.preventDefault();
   const path = await extractCatalogPathFromDrop(e);
@@ -150,6 +157,7 @@ window.addEventListener('drop', async (e) => {
     zone.addEventListener(eventName, (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
       zone.classList.add('dragover');
     });
   });
