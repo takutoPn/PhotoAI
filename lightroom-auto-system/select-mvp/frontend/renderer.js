@@ -1,6 +1,7 @@
 const API = 'http://localhost:8008';
 
 const runBtn = document.getElementById('runBtn');
+const learnBtn = document.getElementById('learnBtn');
 const output = document.getElementById('output');
 const summary = document.getElementById('summary');
 const gallery = document.getElementById('gallery');
@@ -10,6 +11,7 @@ const dropzone = document.getElementById('dropzone');
 const starFilter = document.getElementById('starFilter');
 const columns = document.getElementById('columns');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
+const openLrCheckbox = document.getElementById('openLightroomAfterExport');
 
 let currentJobId = null;
 let currentPicks = [];
@@ -32,10 +34,15 @@ function makePlaceholder(assetId) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+function setCatalogPath(p) {
+  if (!p) return;
+  catalogPathInput.value = p.replace(/^file:\/\//i, '').replace(/\//g, '\\');
+}
+
 function setCatalogPathFromFile(file) {
   if (!file) return;
   const realPath = file.path || file.name;
-  catalogPathInput.value = realPath;
+  setCatalogPath(realPath);
 }
 
 function setDragover(isOn) {
@@ -43,18 +50,36 @@ function setDragover(isOn) {
   else dropzone.classList.remove('dragover');
 }
 
+async function extractCatalogPathFromDrop(e) {
+  const files = Array.from(e.dataTransfer?.files || []);
+  const fromFiles = files.find((f) => f.name?.toLowerCase().endsWith('.lrcat'));
+  if (fromFiles) return fromFiles.path || fromFiles.name;
+
+  const uri = e.dataTransfer?.getData('text/uri-list') || e.dataTransfer?.getData('text/plain') || '';
+  if (uri && uri.toLowerCase().includes('.lrcat')) {
+    return uri.split('\n').find((x) => x.toLowerCase().includes('.lrcat'))?.trim() || null;
+  }
+
+  const items = Array.from(e.dataTransfer?.items || []);
+  for (const item of items) {
+    if (item.kind === 'string') {
+      const text = await new Promise((resolve) => item.getAsString(resolve));
+      if (text && text.toLowerCase().includes('.lrcat')) {
+        return text.trim();
+      }
+    }
+  }
+
+  return null;
+}
+
 catalogFile.addEventListener('change', (e) => {
   const file = e.target.files?.[0];
   setCatalogPathFromFile(file);
 });
 
-// Electronで外側にドロップしたときのナビゲーション暴発を抑止
-window.addEventListener('dragover', (e) => {
-  e.preventDefault();
-});
-window.addEventListener('drop', (e) => {
-  e.preventDefault();
-});
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', (e) => e.preventDefault());
 
 ['dragenter', 'dragover'].forEach((eventName) => {
   dropzone.addEventListener(eventName, (e) => {
@@ -71,16 +96,13 @@ window.addEventListener('drop', (e) => {
   });
 });
 
-dropzone.addEventListener('drop', (e) => {
-  const files = Array.from(e.dataTransfer?.files || []);
-  if (!files.length) return;
-
-  const lrcat = files.find((f) => f.name?.toLowerCase().endsWith('.lrcat'));
-  if (!lrcat) {
+dropzone.addEventListener('drop', async (e) => {
+  const path = await extractCatalogPathFromDrop(e);
+  if (!path || !path.toLowerCase().includes('.lrcat')) {
     output.textContent = 'エラー: .lrcat ファイルを指定してください';
     return;
   }
-  setCatalogPathFromFile(lrcat);
+  setCatalogPath(path);
 });
 
 function passesFilter(item, filter) {
@@ -132,7 +154,6 @@ function buildCard(item) {
 
   const stars = document.createElement('div');
   stars.className = 'stars';
-
   [0, 1, 3].forEach((s) => {
     const b = document.createElement('button');
     b.textContent = `★${s}`;
@@ -158,32 +179,59 @@ function renderChunk(reset = false) {
     gallery.innerHTML = '';
     renderedCount = 0;
   }
-
   const end = Math.min(renderedCount + PAGE_SIZE, currentVisible.length);
   const frag = document.createDocumentFragment();
-  for (let i = renderedCount; i < end; i += 1) {
-    frag.appendChild(buildCard(currentVisible[i]));
-  }
+  for (let i = renderedCount; i < end; i += 1) frag.appendChild(buildCard(currentVisible[i]));
   gallery.appendChild(frag);
   renderedCount = end;
-
   loadMoreBtn.style.display = renderedCount < currentVisible.length ? 'inline-block' : 'none';
 }
 
-function renderGallery(reset = false) {
+function renderGallery() {
   const filter = starFilter.value;
   const col = Number(columns.value || 6);
   gallery.style.gridTemplateColumns = `repeat(${col}, minmax(0, 1fr))`;
 
   currentVisible = currentPicks.filter((p) => passesFilter(p, filter));
   summary.textContent = `全${currentPicks.length}件 / 表示${currentVisible.length}件 / ★3:${currentPicks.filter(p=>p.star===3).length} ★1:${currentPicks.filter(p=>p.star===1).length} ★0:${currentPicks.filter(p=>p.star===0).length}`;
-
   renderChunk(true);
 }
 
-starFilter.addEventListener('change', () => renderGallery(true));
-columns.addEventListener('change', () => renderGallery(true));
+starFilter.addEventListener('change', renderGallery);
+columns.addEventListener('change', renderGallery);
 loadMoreBtn.addEventListener('click', () => renderChunk(false));
+
+async function exportAndMaybeOpenLightroom(jobId, catalogPath) {
+  const exportRes = await fetch(`${API}/jobs/${jobId}/export`, { method: 'POST' });
+  if (!exportRes.ok) {
+    const text = await exportRes.text();
+    throw new Error(`カタログ書き出し失敗 (${exportRes.status}): ${text}`);
+  }
+  const exportInfo = await exportRes.json();
+
+  let openInfo = 'OFF';
+  if (openLrCheckbox.checked && window.desktop?.openLightroom) {
+    const openRes = await window.desktop.openLightroom(catalogPath);
+    openInfo = openRes?.ok ? 'OK' : `失敗(${openRes?.error || 'unknown'})`;
+  }
+
+  return { exportInfo, openInfo };
+}
+
+learnBtn.addEventListener('click', async () => {
+  if (!currentJobId) {
+    output.textContent = '先に実行してください。';
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/jobs/${currentJobId}/learn`, { method: 'POST' });
+    if (!res.ok) throw new Error(await res.text());
+    const info = await res.json();
+    output.textContent = `学習データ追加: ${info.count}件\n保存先: ${info.saved_to}`;
+  } catch (e) {
+    output.textContent = `学習データ追加エラー: ${e.message}`;
+  }
+});
 
 runBtn.addEventListener('click', async () => {
   try {
@@ -199,7 +247,7 @@ runBtn.addEventListener('click', async () => {
       project_name: document.getElementById('projectName').value,
       catalog_path: catalogPath,
       rules: {
-        target_picks: Number(document.getElementById('targetPicks').value),
+        target_picks: Number(document.getElementById('targetPicks').value), // ★3枚数
         max_per_person: Number(document.getElementById('maxPerPerson').value),
         max_per_cluster: Number(document.getElementById('maxPerCluster').value),
         quality_weight: 0.5,
@@ -225,9 +273,11 @@ runBtn.addEventListener('click', async () => {
     const result = await runRes.json();
     currentJobId = result.job_id;
     currentPicks = result.picks;
-    renderGallery(true);
+    renderGallery();
 
-    output.textContent = `完了: job=${result.job_id}\n画像総数=${result.total_assets}\n★3採用=${result.picked_assets}\n警告=${(result.warnings || []).join(', ') || 'なし'}`;
+    const { exportInfo, openInfo } = await exportAndMaybeOpenLightroom(result.job_id, catalogPath);
+
+    output.textContent = `完了: job=${result.job_id}\n画像総数=${result.total_assets}\n★3採用=${result.picked_assets}\n書き出し: updated=${exportInfo.updated}, missing=${exportInfo.missing}\nLightroom起動=${openInfo}\n警告=${(result.warnings || []).join(', ') || 'なし'}`;
   } catch (e) {
     output.textContent = `エラー: ${e.message}\n\n対処:\n1) Backend(uvicorn)が起動しているか\n2) http://localhost:8008/health が開けるか\n3) Windows Defender/Firewallでブロックされていないか`;
   }

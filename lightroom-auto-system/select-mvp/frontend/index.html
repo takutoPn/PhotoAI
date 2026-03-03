@@ -43,7 +43,14 @@
         <div><label>1クラスタ上限</label><input id="maxPerCluster" type="number" value="1" min="1" /></div>
       </div>
 
-      <button id="runBtn">ジョブ作成して実行</button>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+        <button id="runBtn">ジョブ作成して実行</button>
+        <button id="learnBtn" type="button" style="background:#56a;">学習データに追加</button>
+        <label style="display:flex; align-items:center; gap:6px; color:#ddd;">
+          <input id="openLightroomAfterExport" type="checkbox" checked style="width:auto; margin:0;" />
+          完了後にLightroomでCatalogを開く
+        </label>
+      </div>
     </div>
 
     <div class="card toolbar">
