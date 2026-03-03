@@ -58,7 +58,7 @@
       </div>
     </div>
 
-    <div class="card toolbar">
+    <div class="card toolbar" style="grid-template-columns: 180px 180px 220px 1fr;">
       <div>
         <label>表示フィルタ</label>
         <select id="starFilter">
@@ -79,6 +79,15 @@
           <option value="4">4</option>
           <option value="5">5</option>
           <option value="6" selected>6</option>
+        </select>
+      </div>
+      <div>
+        <label>並び順</label>
+        <select id="sortBy">
+          <option value="star" selected>星順(デフォルト)</option>
+          <option value="date">撮影日順</option>
+          <option value="name">お名前順</option>
+          <option value="format">ファイル形式順</option>
         </select>
       </div>
       <div id="summary" class="muted"></div>

@@ -13,6 +13,7 @@ const catalogPathInput = document.getElementById('catalogPath');
 const dropzone = document.getElementById('dropzone');
 const starFilter = document.getElementById('starFilter');
 const columns = document.getElementById('columns');
+const sortBy = document.getElementById('sortBy');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
 const openLrCheckbox = document.getElementById('openLightroomAfterExport');
 
@@ -82,7 +83,14 @@ catalogFile.addEventListener('change', (e) => {
 });
 
 window.addEventListener('dragover', (e) => e.preventDefault());
-window.addEventListener('drop', (e) => e.preventDefault());
+window.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const path = await extractCatalogPathFromDrop(e);
+  if (path && path.toLowerCase().includes('.lrcat')) {
+    setCatalogPath(path);
+    output.textContent = 'Catalogをドロップから認識しました。';
+  }
+});
 
 ['dragenter', 'dragover'].forEach((eventName) => {
   dropzone.addEventListener(eventName, (e) => {
@@ -190,18 +198,44 @@ function renderChunk(reset = false) {
   loadMoreBtn.style.display = renderedCount < currentVisible.length ? 'inline-block' : 'none';
 }
 
+function fileExt(path) {
+  const p = String(path || '');
+  const i = p.lastIndexOf('.');
+  if (i < 0) return '';
+  return p.slice(i + 1).toLowerCase();
+}
+
+function parseDate(item) {
+  if (item.capture_date) return new Date(item.capture_date).getTime() || 0;
+  return 0;
+}
+
+function compareBySort(a, b, mode) {
+  if (mode === 'date') return parseDate(a) - parseDate(b);
+  if (mode === 'name') return String(a.person_id || '').localeCompare(String(b.person_id || ''));
+  if (mode === 'format') return fileExt(a.path).localeCompare(fileExt(b.path));
+  // star default (desc), then score desc
+  if (b.star !== a.star) return b.star - a.star;
+  return (b.score || 0) - (a.score || 0);
+}
+
 function renderGallery() {
   const filter = starFilter.value;
   const col = Number(columns.value || 6);
+  const mode = sortBy.value || 'star';
   gallery.style.gridTemplateColumns = `repeat(${col}, minmax(0, 1fr))`;
 
-  currentVisible = currentPicks.filter((p) => passesFilter(p, filter));
+  currentVisible = currentPicks
+    .filter((p) => passesFilter(p, filter))
+    .slice()
+    .sort((a, b) => compareBySort(a, b, mode));
   summary.textContent = `全${currentPicks.length}件 / 表示${currentVisible.length}件 / ★3:${currentPicks.filter(p=>p.star===3).length} ★1:${currentPicks.filter(p=>p.star===1).length} ★0:${currentPicks.filter(p=>p.star===0).length}`;
   renderChunk(true);
 }
 
 starFilter.addEventListener('change', renderGallery);
 columns.addEventListener('change', renderGallery);
+sortBy.addEventListener('change', renderGallery);
 loadMoreBtn.addEventListener('click', () => renderChunk(false));
 
 async function exportAndMaybeOpenLightroom(jobId, catalogPath) {

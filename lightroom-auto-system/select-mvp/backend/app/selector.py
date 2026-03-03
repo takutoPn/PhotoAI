@@ -24,6 +24,7 @@ def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_d
                 "path": path,
                 "person_id": f.person_id,
                 "cluster_id": f.cluster_id,
+                "capture_date": f.capture_date,
                 "score": score,
                 "reason": (
                     f"quality={f.quality_score:.2f}, face={f.face_score:.2f}, "
@@ -129,6 +130,7 @@ def run_selection(asset_paths: list[str], rules: SelectionRules, preview_cache_d
                 score=round(a["score"], 4),
                 person_id=a["person_id"],
                 cluster_id=a["cluster_id"],
+                capture_date=a.get("capture_date"),
                 pick=pick,
                 star=star,
                 reason=reason,

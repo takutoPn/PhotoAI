@@ -32,6 +32,7 @@ class SelectionItem(BaseModel):
     score: float
     person_id: str
     cluster_id: str
+    capture_date: str | None = None
     pick: bool
     star: int = Field(default=0, ge=0, le=3)
     reason: str

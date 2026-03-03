@@ -15,6 +15,12 @@ function createWindow() {
     }
   });
 
+  // ファイルドロップ時にElectronがページ遷移してD&Dを潰すのを防止
+  win.webContents.on('will-navigate', (event) => {
+    event.preventDefault();
+  });
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
   win.loadFile('index.html');
 }
 
