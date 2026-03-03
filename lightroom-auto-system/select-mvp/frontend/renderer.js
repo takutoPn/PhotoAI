@@ -7,6 +7,7 @@ const importHistoryBtn = document.getElementById('importHistoryBtn');
 const historyCatalogPathInput = document.getElementById('historyCatalogPath');
 const historyCatalogFile = document.getElementById('historyCatalogFile');
 const historyDropzone = document.getElementById('historyDropzone');
+const shareLearningData = document.getElementById('shareLearningData');
 const output = document.getElementById('output');
 const summary = document.getElementById('summary');
 const gallery = document.getElementById('gallery');
@@ -381,10 +382,14 @@ learnBtn.addEventListener('click', async () => {
     return;
   }
   try {
-    const res = await fetch(`${API}/jobs/${currentJobId}/learn`, { method: 'POST' });
+    const res = await fetch(`${API}/jobs/${currentJobId}/learn`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ share_learning: !!shareLearningData?.checked })
+    });
     if (!res.ok) throw new Error(await res.text());
     const info = await res.json();
-    output.textContent = `学習データ追加: ${info.count}件\n保存先: ${info.saved_to}`;
+    output.textContent = `学習データ追加: ${info.count}件\n保存先: ${info.saved_to}\n共有設定: ${info.share_learning ? 'ON(任意)' : 'OFF'}\n外部共有: ${info.external_shared ? 'あり' : 'なし'}`;
   } catch (e) {
     output.textContent = `学習データ追加エラー: ${e.message}`;
   }
@@ -401,11 +406,16 @@ importHistoryBtn.addEventListener('click', async () => {
     const res = await fetch(`${API}/learning/import_catalog`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ catalog_path: catalogPath, min_rating: 1, limit: 50000 })
+      body: JSON.stringify({
+        catalog_path: catalogPath,
+        min_rating: 1,
+        limit: 50000,
+        share_learning: !!shareLearningData?.checked
+      })
     });
     if (!res.ok) throw new Error(await res.text());
     const info = await res.json();
-    output.textContent = `過去データ取り込み完了: ${info.count}件\n保存先: ${info.saved_to}`;
+    output.textContent = `過去データ取り込み完了: ${info.count}件\n保存先: ${info.saved_to}\n共有設定: ${info.share_learning ? 'ON(任意)' : 'OFF'}\n外部共有: ${info.external_shared ? 'あり' : 'なし'}`;
   } catch (e) {
     output.textContent = `過去データ取り込みエラー: ${e.message}`;
   }

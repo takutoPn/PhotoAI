@@ -9,7 +9,7 @@ import os
 import base64
 from datetime import datetime
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping
+from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest
 from .selector import run_selection
 from .catalog import parse_catalog_assets
 from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning
@@ -272,7 +272,7 @@ def export_to_lightroom(job_id: str, mapping: ExportMapping | None = None):
 
 
 @app.post("/jobs/{job_id}/learn")
-def learn_from_job(job_id: str):
+def learn_from_job(job_id: str, payload: LearnRequest | None = None):
     job = jobs.get(job_id)
     result = results.get(job_id)
     if not job or not result:
@@ -281,12 +281,15 @@ def learn_from_job(job_id: str):
     LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
     out_path = LEARNING_DATA_PATH
 
+    req = payload or LearnRequest()
+
     payload = {
         "ts": datetime.utcnow().isoformat() + "Z",
         "source": "job",
         "job_id": job_id,
         "project_name": job.project_name,
         "rules": job.rules.model_dump(),
+        "share_learning": bool(req.share_learning),
         # 個人情報/生データ回避: path, asset_id, preview_path, reason は保存しない
         "items": [_safe_learning_item_from_pick(p) for p in result.picks],
     }
@@ -295,7 +298,14 @@ def learn_from_job(job_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"learn save failed: {e}")
 
-    return {"ok": True, "saved_to": str(out_path), "count": len(result.picks), "encrypted": True}
+    return {
+        "ok": True,
+        "saved_to": str(out_path),
+        "count": len(result.picks),
+        "encrypted": True,
+        "share_learning": bool(req.share_learning),
+        "external_shared": False,
+    }
 
 
 @app.post("/learning/import_catalog")
@@ -320,6 +330,7 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
         "source": "historical-import",
         "job_id": None,
         "project_name": "historical-import",
+        "share_learning": bool(payload.share_learning),
         "rules": {"rating_profile": profile},
         # 個人情報/生データ回避: パスは保存しない
         "items": [_safe_learning_item_from_catalog_row(x, profile) for x in items],
@@ -330,4 +341,11 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"import save failed: {e}")
 
-    return {"ok": True, "saved_to": str(out_path), "count": len(items), "encrypted": True}
+    return {
+        "ok": True,
+        "saved_to": str(out_path),
+        "count": len(items),
+        "encrypted": True,
+        "share_learning": bool(payload.share_learning),
+        "external_shared": False,
+    }

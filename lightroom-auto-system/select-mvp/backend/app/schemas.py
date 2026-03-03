@@ -51,10 +51,15 @@ class StarUpdateRequest(BaseModel):
     star: int = Field(ge=0, le=3)
 
 
+class LearnRequest(BaseModel):
+    share_learning: bool = False
+
+
 class ImportCatalogLearningRequest(BaseModel):
     catalog_path: str
     min_rating: int = Field(default=1, ge=0, le=5)
     limit: int = Field(default=20000, ge=1, le=200000)
+    share_learning: bool = False
 
 
 class ExportMapping(BaseModel):
