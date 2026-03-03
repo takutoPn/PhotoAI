@@ -5,7 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from uuid import uuid4
 from pathlib import Path
 import json
+import os
+import base64
 from datetime import datetime
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping
 from .selector import run_selection
 from .catalog import parse_catalog_assets
@@ -26,7 +29,46 @@ results: dict[str, JobResult] = {}
 
 # 学習データはCatalog側ではなく backend 配下に集約保存する
 LEARNING_DATA_DIR = Path(__file__).resolve().parents[1] / "learning_data"
-LEARNING_DATA_PATH = LEARNING_DATA_DIR / "learning_events.jsonl"
+LEARNING_DATA_PATH = LEARNING_DATA_DIR / "learning_events.enc"
+LEARNING_KEY_ENV = "PHOTOAI_LEARNING_KEY"
+
+
+def _get_learning_key() -> bytes:
+    raw = os.getenv(LEARNING_KEY_ENV, "").strip()
+    if not raw:
+        raise RuntimeError(f"missing env: {LEARNING_KEY_ENV}")
+
+    # base64 urlsafe (推奨) / plain base64 を受け付ける
+    candidates = [raw]
+    if "-" in raw or "_" in raw:
+        candidates.append(raw.replace('-', '+').replace('_', '/'))
+
+    for c in candidates:
+        padded = c + "=" * ((4 - len(c) % 4) % 4)
+        try:
+            key = base64.b64decode(padded)
+            if len(key) == 32:
+                return key
+        except Exception:
+            pass
+
+    raise RuntimeError(f"{LEARNING_KEY_ENV} must be base64-encoded 32-byte key")
+
+
+def _append_encrypted_event(out_path: Path, event: dict):
+    key = _get_learning_key()
+    aes = AESGCM(key)
+    nonce = os.urandom(12)
+    plain = json.dumps(event, ensure_ascii=False).encode("utf-8")
+    cipher = aes.encrypt(nonce, plain, None)
+    line = {
+        "v": 1,
+        "alg": "AES-256-GCM",
+        "nonce": base64.b64encode(nonce).decode("ascii"),
+        "ciphertext": base64.b64encode(cipher).decode("ascii"),
+    }
+    with out_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(line, ensure_ascii=False) + "\n")
 
 
 def _safe_learning_item_from_pick(item):
@@ -248,10 +290,12 @@ def learn_from_job(job_id: str):
         # 個人情報/生データ回避: path, asset_id, preview_path, reason は保存しない
         "items": [_safe_learning_item_from_pick(p) for p in result.picks],
     }
-    with out_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    try:
+        _append_encrypted_event(out_path, payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"learn save failed: {e}")
 
-    return {"ok": True, "saved_to": str(out_path), "count": len(result.picks)}
+    return {"ok": True, "saved_to": str(out_path), "count": len(result.picks), "encrypted": True}
 
 
 @app.post("/learning/import_catalog")
@@ -281,7 +325,9 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
         "items": [_safe_learning_item_from_catalog_row(x, profile) for x in items],
     }
 
-    with out_path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(event, ensure_ascii=False) + "\n")
+    try:
+        _append_encrypted_event(out_path, event)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"import save failed: {e}")
 
-    return {"ok": True, "saved_to": str(out_path), "count": len(items)}
+    return {"ok": True, "saved_to": str(out_path), "count": len(items), "encrypted": True}

@@ -20,6 +20,10 @@
 2. 変更理由がわかるメッセージにする
 3. pushをこまめに実行
 
+## 学習データ暗号化
+- 学習イベントは `backend/learning_data/learning_events.enc` に暗号化保存されます。
+- 環境変数 `PHOTOAI_LEARNING_KEY`（base64の32byte鍵）が必須です。
+
 ## クイックコマンド
 ```bash
 git add -A
