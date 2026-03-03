@@ -17,13 +17,13 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
     return cur.fetchone() is not None
 
 
-def _rating_from_star(star: int) -> int:
-    # MVPマッピング: ★3=5, ★1=3, ★0=0
+def _rating_from_star(star: int, selected_star: int = 3, reserve_star: int = 1, reject_star: int = 0) -> int:
+    # 内部スター(3/1/0)を、書き出し時のLightroomレートへマッピング
     if star >= 3:
-        return 5
+        return selected_star
     if star >= 1:
-        return 3
-    return 0
+        return reserve_star
+    return reject_star
 
 
 def extract_existing_ratings_for_learning(catalog_path: str, min_rating: int = 1, limit: int = 20000) -> list[dict]:
@@ -63,7 +63,13 @@ def extract_existing_ratings_for_learning(catalog_path: str, min_rating: int = 1
         conn.close()
 
 
-def export_ratings_to_catalog(catalog_path: str, picks: Iterable[SelectionItem]) -> dict:
+def export_ratings_to_catalog(
+    catalog_path: str,
+    picks: Iterable[SelectionItem],
+    selected_star: int = 3,
+    reserve_star: int = 1,
+    reject_star: int = 0,
+) -> dict:
     cpath = Path(catalog_path)
     if not cpath.exists() or cpath.suffix.lower() != ".lrcat":
         raise FileNotFoundError(f"catalog not found: {catalog_path}")
@@ -107,7 +113,12 @@ def export_ratings_to_catalog(catalog_path: str, picks: Iterable[SelectionItem])
                 missing += 1
                 continue
 
-            rating = _rating_from_star(item.star)
+            rating = _rating_from_star(
+                item.star,
+                selected_star=selected_star,
+                reserve_star=reserve_star,
+                reject_star=reject_star,
+            )
             for id_local in ids:
                 if has_rating:
                     cur.execute("UPDATE Adobe_images SET rating = ? WHERE id_local = ?", (rating, id_local))

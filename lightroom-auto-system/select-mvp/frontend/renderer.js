@@ -18,11 +18,36 @@ const columns = document.getElementById('columns');
 const sortBy = document.getElementById('sortBy');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
 const openLrCheckbox = document.getElementById('openLightroomAfterExport');
+const exportSelectedStar = document.getElementById('exportSelectedStar');
+const exportReserveStar = document.getElementById('exportReserveStar');
+const exportRejectStar = document.getElementById('exportRejectStar');
 
 let currentJobId = null;
 let currentPicks = [];
 let currentVisible = [];
 let renderedCount = 0;
+
+const EXPORT_MAP_KEY = 'selectMvp.exportMapping';
+
+function loadExportMappingPrefs() {
+  try {
+    const raw = localStorage.getItem(EXPORT_MAP_KEY);
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    if (p.selected_star != null) exportSelectedStar.value = String(p.selected_star);
+    if (p.reserve_star != null) exportReserveStar.value = String(p.reserve_star);
+    if (p.reject_star != null) exportRejectStar.value = String(p.reject_star);
+  } catch (_) {}
+}
+
+function saveExportMappingPrefs() {
+  const p = {
+    selected_star: Number(exportSelectedStar.value || 3),
+    reserve_star: Number(exportReserveStar.value || 1),
+    reject_star: Number(exportRejectStar.value || 0)
+  };
+  localStorage.setItem(EXPORT_MAP_KEY, JSON.stringify(p));
+}
 
 const PAGE_SIZE = 120;
 
@@ -278,9 +303,23 @@ starFilter.addEventListener('change', renderGallery);
 columns.addEventListener('change', renderGallery);
 sortBy.addEventListener('change', renderGallery);
 loadMoreBtn.addEventListener('click', () => renderChunk(false));
+[exportSelectedStar, exportReserveStar, exportRejectStar].forEach((el) => {
+  el.addEventListener('change', saveExportMappingPrefs);
+});
+loadExportMappingPrefs();
 
 async function exportAndMaybeOpenLightroom(jobId, catalogPath) {
-  const exportRes = await fetch(`${API}/jobs/${jobId}/export`, { method: 'POST' });
+  const mapping = {
+    selected_star: Number(exportSelectedStar.value || 3),
+    reserve_star: Number(exportReserveStar.value || 1),
+    reject_star: Number(exportRejectStar.value || 0)
+  };
+
+  const exportRes = await fetch(`${API}/jobs/${jobId}/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(mapping)
+  });
   if (!exportRes.ok) {
     const text = await exportRes.text();
     throw new Error(`カタログ書き出し失敗 (${exportRes.status}): ${text}`);
@@ -304,7 +343,7 @@ saveBtn.addEventListener('click', async () => {
   try {
     const catalogPath = catalogPathInput.value.trim();
     const { exportInfo, openInfo } = await exportAndMaybeOpenLightroom(currentJobId, catalogPath);
-    output.textContent = `保存完了: job=${currentJobId}\n書き出し: updated=${exportInfo.updated}, missing=${exportInfo.missing}\nLightroom起動=${openInfo}`;
+    output.textContent = `保存完了: job=${currentJobId}\n書き出し: updated=${exportInfo.updated}, missing=${exportInfo.missing}\n書き出しマッピング: selected=★${exportInfo.mapping?.selected_star}, reserve=★${exportInfo.mapping?.reserve_star}, reject=★${exportInfo.mapping?.reject_star}\nLightroom起動=${openInfo}`;
   } catch (e) {
     output.textContent = `保存エラー: ${e.message}`;
   }

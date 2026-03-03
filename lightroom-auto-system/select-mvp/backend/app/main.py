@@ -6,7 +6,7 @@ from uuid import uuid4
 from pathlib import Path
 import json
 from datetime import datetime
-from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest
+from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping
 from .selector import run_selection
 from .catalog import parse_catalog_assets
 from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning
@@ -209,15 +209,22 @@ def update_star(job_id: str, payload: StarUpdateRequest):
 
 
 @app.post("/jobs/{job_id}/export")
-def export_to_lightroom(job_id: str):
+def export_to_lightroom(job_id: str, mapping: ExportMapping | None = None):
     job = jobs.get(job_id)
     result = results.get(job_id)
     if not job or not result:
         raise HTTPException(status_code=404, detail="job/result not found")
 
     try:
-        info = export_ratings_to_catalog(job.catalog_path, result.picks)
-        return {"ok": True, **info}
+        m = mapping or ExportMapping()
+        info = export_ratings_to_catalog(
+            job.catalog_path,
+            result.picks,
+            selected_star=m.selected_star,
+            reserve_star=m.reserve_star,
+            reject_star=m.reject_star,
+        )
+        return {"ok": True, "mapping": m.model_dump(), **info}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"export failed: {e}")
 
