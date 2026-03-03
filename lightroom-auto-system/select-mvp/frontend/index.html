@@ -52,9 +52,14 @@
           保存後にLightroomでCatalogを開く
         </label>
       </div>
-      <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
-        <input id="historyCatalogPath" placeholder="過去Catalog(.lrcat)のパスを指定" style="max-width:520px;" />
-        <button id="importHistoryBtn" type="button" style="background:#468;">過去セレクト/レタッチ履歴を学習に取り込む</button>
+      <div style="margin-top:10px;">
+        <label>学習取り込み用Catalog (.lrcat)</label>
+        <div id="historyDropzone" class="dropzone">ここに過去 .lrcat をドラッグ&ドロップ</div>
+        <input id="historyCatalogFile" type="file" accept=".lrcat" />
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+          <input id="historyCatalogPath" placeholder="過去Catalog(.lrcat)のパスを指定" style="max-width:520px;" />
+          <button id="importHistoryBtn" type="button" style="background:#468;">過去セレクト/レタッチ履歴を学習に取り込む</button>
+        </div>
       </div>
     </div>
 

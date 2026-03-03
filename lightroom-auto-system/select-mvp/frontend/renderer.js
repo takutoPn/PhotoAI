@@ -5,6 +5,8 @@ const learnBtn = document.getElementById('learnBtn');
 const saveBtn = document.getElementById('saveBtn');
 const importHistoryBtn = document.getElementById('importHistoryBtn');
 const historyCatalogPathInput = document.getElementById('historyCatalogPath');
+const historyCatalogFile = document.getElementById('historyCatalogFile');
+const historyDropzone = document.getElementById('historyDropzone');
 const output = document.getElementById('output');
 const summary = document.getElementById('summary');
 const gallery = document.getElementById('gallery');
@@ -49,6 +51,17 @@ function setCatalogPathFromFile(file) {
   setCatalogPath(realPath);
 }
 
+function setHistoryCatalogPath(p) {
+  if (!p) return;
+  historyCatalogPathInput.value = p.replace(/^file:\/\//i, '').replace(/\//g, '\\');
+}
+
+function setHistoryCatalogPathFromFile(file) {
+  if (!file) return;
+  const realPath = file.path || file.name;
+  setHistoryCatalogPath(realPath);
+}
+
 function setDragover(isOn) {
   if (isOn) dropzone.classList.add('dragover');
   else dropzone.classList.remove('dragover');
@@ -82,28 +95,47 @@ catalogFile.addEventListener('change', (e) => {
   setCatalogPathFromFile(file);
 });
 
+historyCatalogFile.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  setHistoryCatalogPathFromFile(file);
+});
+
+function isWithin(el, target) {
+  return !!(el && target && (el === target || el.contains(target)));
+}
+
 window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', async (e) => {
   e.preventDefault();
   const path = await extractCatalogPathFromDrop(e);
-  if (path && path.toLowerCase().includes('.lrcat')) {
-    setCatalogPath(path);
-    output.textContent = 'Catalogをドロップから認識しました。';
+  if (!path || !path.toLowerCase().includes('.lrcat')) return;
+
+  if (isWithin(historyDropzone, e.target)) {
+    setHistoryCatalogPath(path);
+    output.textContent = '過去Catalogをドロップから認識しました。';
+    return;
   }
+
+  setCatalogPath(path);
+  output.textContent = 'Catalogをドロップから認識しました。';
 });
 
 ['dragenter', 'dragover'].forEach((eventName) => {
-  dropzone.addEventListener(eventName, (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragover(true);
+  [dropzone, historyDropzone].forEach((zone) => {
+    zone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      zone.classList.add('dragover');
+    });
   });
 });
 ['dragleave', 'drop'].forEach((eventName) => {
-  dropzone.addEventListener(eventName, (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragover(false);
+  [dropzone, historyDropzone].forEach((zone) => {
+    zone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      zone.classList.remove('dragover');
+    });
   });
 });
 
@@ -114,6 +146,15 @@ dropzone.addEventListener('drop', async (e) => {
     return;
   }
   setCatalogPath(path);
+});
+
+historyDropzone.addEventListener('drop', async (e) => {
+  const path = await extractCatalogPathFromDrop(e);
+  if (!path || !path.toLowerCase().includes('.lrcat')) {
+    output.textContent = 'エラー: 学習用に .lrcat ファイルを指定してください';
+    return;
+  }
+  setHistoryCatalogPath(path);
 });
 
 function passesFilter(item, filter) {
