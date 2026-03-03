@@ -48,26 +48,56 @@ def _safe_learning_item_from_pick(item):
     }
 
 
-def _infer_intent_label(rating: int, pick: int) -> dict:
-    # 案件ごとに運用が違う前提で、まずは汎用ルールで自動正規化
-    # - ★5: キーショット(集合写真など)になりやすい
-    # - ★3以上 or Pick: セレクト済み
-    if rating >= 5:
-        return {"intent": "hero", "selected": 1, "priority": 3}
-    if rating >= 3 or pick > 0:
+def _build_rating_profile(rows: list[dict]) -> dict:
+    ratings = [int(r.get("rating") or 0) for r in rows]
+    max_rating = max(ratings) if ratings else 0
+
+    # 案件ごとの運用に合わせて selected の下限を自動判定
+    # 例: ★3以上運用 / ★2以上運用 / ★1以上運用
+    if any(r >= 3 for r in ratings):
+        selected_min = 3
+    elif any(r >= 2 for r in ratings):
+        selected_min = 2
+    elif any(r >= 1 for r in ratings):
+        selected_min = 1
+    else:
+        selected_min = 5  # 実質 selected なし
+
+    hero_rating = max_rating if max_rating >= max(4, selected_min + 1) else None
+    candidate_rating = selected_min - 1 if selected_min > 1 else None
+
+    return {
+        "selected_min": selected_min,
+        "hero_rating": hero_rating,
+        "candidate_rating": candidate_rating,
+    }
+
+
+def _infer_intent_label(rating: int, pick: int, profile: dict) -> dict:
+    selected_min = int(profile.get("selected_min", 3))
+    hero_rating = profile.get("hero_rating")
+    candidate_rating = profile.get("candidate_rating")
+
+    # Pickフラグは常に selected 扱い
+    if pick > 0:
         return {"intent": "selected", "selected": 1, "priority": 2}
-    if rating == 2:
+
+    if hero_rating is not None and rating >= int(hero_rating):
+        return {"intent": "hero", "selected": 1, "priority": 3}
+    if rating >= selected_min:
+        return {"intent": "selected", "selected": 1, "priority": 2}
+    if candidate_rating is not None and rating == int(candidate_rating):
         return {"intent": "candidate", "selected": 0, "priority": 1}
-    if rating == 1:
+    if rating >= 1:
         return {"intent": "reserve", "selected": 0, "priority": 1}
     return {"intent": "reject", "selected": 0, "priority": 0}
 
 
-def _safe_learning_item_from_catalog_row(row: dict):
+def _safe_learning_item_from_catalog_row(row: dict, profile: dict):
     ext = Path(row.get("path") or "").suffix.lower().lstrip('.')
     rating = int(row.get("rating") or 0)
     pick = int(row.get("pick") or 0)
-    inferred = _infer_intent_label(rating, pick)
+    inferred = _infer_intent_label(rating, pick, profile)
     return {
         "rating": rating,
         "pick": pick,
@@ -232,14 +262,16 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"import failed: {e}")
 
+    profile = _build_rating_profile(items)
+
     event = {
         "ts": datetime.utcnow().isoformat() + "Z",
         "source": "historical-import",
         "job_id": None,
         "project_name": "historical-import",
-        "rules": {},
+        "rules": {"rating_profile": profile},
         # 個人情報/生データ回避: パスは保存しない
-        "items": [_safe_learning_item_from_catalog_row(x) for x in items],
+        "items": [_safe_learning_item_from_catalog_row(x, profile) for x in items],
     }
 
     with out_path.open("a", encoding="utf-8") as f:
