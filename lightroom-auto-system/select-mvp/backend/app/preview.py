@@ -50,12 +50,38 @@ def _generate_image_preview(image_path: Path, cache_dir: Path) -> str | None:
     if out_path.exists():
         return str(out_path)
 
+    # まずPillowで変換を試みる
     try:
         with Image.open(image_path) as img:
             img = img.convert("RGB")
             img.thumbnail((2200, 2200))
             img.save(out_path, format="JPEG", quality=88)
         return str(out_path)
+    except Exception:
+        pass
+
+    # TIFFでPillowが失敗する環境向け: OpenCVでフォールバック
+    try:
+        import cv2
+
+        src = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
+        if src is None:
+            return None
+
+        # グレースケール/4chなどをJPEG向け3ch(BGR)へ整形
+        if len(src.shape) == 2:
+            src = cv2.cvtColor(src, cv2.COLOR_GRAY2BGR)
+        elif src.shape[2] == 4:
+            src = cv2.cvtColor(src, cv2.COLOR_BGRA2BGR)
+
+        h, w = src.shape[:2]
+        max_side = 2200
+        scale = min(1.0, max_side / max(h, w))
+        if scale < 1.0:
+            src = cv2.resize(src, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
+        ok = cv2.imwrite(str(out_path), src, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
+        return str(out_path) if ok else None
     except Exception:
         return None
 
