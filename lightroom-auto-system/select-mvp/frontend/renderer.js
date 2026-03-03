@@ -129,16 +129,23 @@ function isWithin(el, target) {
   return !!(el && target && (el === target || el.contains(target)));
 }
 
-window.addEventListener('dragenter', (e) => {
+const allowDrop = (e) => {
   e.preventDefault();
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  e.stopPropagation();
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.dropEffect = 'copy';
+  }
+};
+
+['dragenter', 'dragover'].forEach((ev) => {
+  window.addEventListener(ev, allowDrop);
+  document.addEventListener(ev, allowDrop);
+  document.body?.addEventListener?.(ev, allowDrop);
 });
-window.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-});
+
 window.addEventListener('drop', async (e) => {
-  e.preventDefault();
+  allowDrop(e);
   const path = await extractCatalogPathFromDrop(e);
   if (!path || !path.toLowerCase().includes('.lrcat')) return;
 
