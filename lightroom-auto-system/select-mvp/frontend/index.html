@@ -44,12 +44,17 @@
       </div>
 
       <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-        <button id="runBtn">ジョブ作成して実行</button>
+        <button id="runBtn">ジョブ作成して実行（表示のみ）</button>
+        <button id="saveBtn" type="button" style="background:#c85;">評価をCatalogに保存</button>
         <button id="learnBtn" type="button" style="background:#56a;">学習データに追加</button>
         <label style="display:flex; align-items:center; gap:6px; color:#ddd;">
           <input id="openLightroomAfterExport" type="checkbox" checked style="width:auto; margin:0;" />
-          完了後にLightroomでCatalogを開く
+          保存後にLightroomでCatalogを開く
         </label>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+        <input id="historyCatalogPath" placeholder="過去Catalog(.lrcat)のパスを指定" style="max-width:520px;" />
+        <button id="importHistoryBtn" type="button" style="background:#468;">過去セレクト/レタッチ履歴を学習に取り込む</button>
       </div>
     </div>
 

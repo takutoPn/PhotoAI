@@ -1,4 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');

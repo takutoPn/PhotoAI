@@ -26,6 +26,43 @@ def _rating_from_star(star: int) -> int:
     return 0
 
 
+def extract_existing_ratings_for_learning(catalog_path: str, min_rating: int = 1, limit: int = 20000) -> list[dict]:
+    cpath = Path(catalog_path)
+    if not cpath.exists() or cpath.suffix.lower() != ".lrcat":
+        raise FileNotFoundError(f"catalog not found: {catalog_path}")
+
+    conn = sqlite3.connect(str(cpath))
+    conn.execute("PRAGMA busy_timeout = 60000")
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT
+              COALESCE(rr.absolutePath, '') || COALESCE(af.pathFromRoot, '') || f.baseName || '.' || f.extension AS full_path,
+              COALESCE(ai.rating, 0) AS rating,
+              COALESCE(ai.pick, 0) AS pick
+            FROM Adobe_images ai
+            JOIN AgLibraryFile f ON ai.rootFile = f.id_local
+            LEFT JOIN AgLibraryFolder af ON f.folder = af.id_local
+            LEFT JOIN AgLibraryRootFolder rr ON af.rootFolder = rr.id_local
+            WHERE COALESCE(ai.rating, 0) >= ? OR COALESCE(ai.pick, 0) > 0
+            LIMIT ?
+            """,
+            (min_rating, limit),
+        )
+        rows = cur.fetchall()
+        out = []
+        for full_path, rating, pick in rows:
+            out.append({
+                "path": str(Path(full_path)) if full_path else "",
+                "rating": int(rating or 0),
+                "pick": int(pick or 0),
+            })
+        return out
+    finally:
+        conn.close()
+
+
 def export_ratings_to_catalog(catalog_path: str, picks: Iterable[SelectionItem]) -> dict:
     cpath = Path(catalog_path)
     if not cpath.exists() or cpath.suffix.lower() != ".lrcat":

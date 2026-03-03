@@ -2,6 +2,9 @@ const API = 'http://localhost:8008';
 
 const runBtn = document.getElementById('runBtn');
 const learnBtn = document.getElementById('learnBtn');
+const saveBtn = document.getElementById('saveBtn');
+const importHistoryBtn = document.getElementById('importHistoryBtn');
+const historyCatalogPathInput = document.getElementById('historyCatalogPath');
 const output = document.getElementById('output');
 const summary = document.getElementById('summary');
 const gallery = document.getElementById('gallery');
@@ -218,6 +221,20 @@ async function exportAndMaybeOpenLightroom(jobId, catalogPath) {
   return { exportInfo, openInfo };
 }
 
+saveBtn.addEventListener('click', async () => {
+  if (!currentJobId) {
+    output.textContent = '先に「ジョブ作成して実行（表示のみ）」を実行してください。';
+    return;
+  }
+  try {
+    const catalogPath = catalogPathInput.value.trim();
+    const { exportInfo, openInfo } = await exportAndMaybeOpenLightroom(currentJobId, catalogPath);
+    output.textContent = `保存完了: job=${currentJobId}\n書き出し: updated=${exportInfo.updated}, missing=${exportInfo.missing}\nLightroom起動=${openInfo}`;
+  } catch (e) {
+    output.textContent = `保存エラー: ${e.message}`;
+  }
+});
+
 learnBtn.addEventListener('click', async () => {
   if (!currentJobId) {
     output.textContent = '先に実行してください。';
@@ -230,6 +247,27 @@ learnBtn.addEventListener('click', async () => {
     output.textContent = `学習データ追加: ${info.count}件\n保存先: ${info.saved_to}`;
   } catch (e) {
     output.textContent = `学習データ追加エラー: ${e.message}`;
+  }
+});
+
+importHistoryBtn.addEventListener('click', async () => {
+  try {
+    const catalogPath = historyCatalogPathInput.value.trim() || catalogPathInput.value.trim();
+    if (!catalogPath) {
+      output.textContent = '過去Catalogのパスを指定してください。';
+      return;
+    }
+
+    const res = await fetch(`${API}/learning/import_catalog`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ catalog_path: catalogPath, min_rating: 1, limit: 50000 })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const info = await res.json();
+    output.textContent = `過去データ取り込み完了: ${info.count}件\n保存先: ${info.saved_to}`;
+  } catch (e) {
+    output.textContent = `過去データ取り込みエラー: ${e.message}`;
   }
 });
 
@@ -275,9 +313,7 @@ runBtn.addEventListener('click', async () => {
     currentPicks = result.picks;
     renderGallery();
 
-    const { exportInfo, openInfo } = await exportAndMaybeOpenLightroom(result.job_id, catalogPath);
-
-    output.textContent = `完了: job=${result.job_id}\n画像総数=${result.total_assets}\n★3採用=${result.picked_assets}\n書き出し: updated=${exportInfo.updated}, missing=${exportInfo.missing}\nLightroom起動=${openInfo}\n警告=${(result.warnings || []).join(', ') || 'なし'}`;
+    output.textContent = `完了(表示のみ): job=${result.job_id}\n画像総数=${result.total_assets}\n★3採用=${result.picked_assets}\n次は「評価をCatalogに保存」を押してください\n警告=${(result.warnings || []).join(', ') || 'なし'}`;
   } catch (e) {
     output.textContent = `エラー: ${e.message}\n\n対処:\n1) Backend(uvicorn)が起動しているか\n2) http://localhost:8008/health が開けるか\n3) Windows Defender/Firewallでブロックされていないか`;
   }

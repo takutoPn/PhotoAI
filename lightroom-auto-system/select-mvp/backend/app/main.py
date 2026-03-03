@@ -6,10 +6,10 @@ from uuid import uuid4
 from pathlib import Path
 import json
 from datetime import datetime
-from .schemas import Job, JobCreate, JobResult, StarUpdateRequest
+from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest
 from .selector import run_selection
 from .catalog import parse_catalog_assets
-from .lightroom_write import export_ratings_to_catalog
+from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning
 
 app = FastAPI(title="Lightroom Select MVP API", version="0.1.0")
 
@@ -162,3 +162,34 @@ def learn_from_job(job_id: str):
         f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
     return {"ok": True, "saved_to": str(out_path), "count": len(result.picks)}
+
+
+@app.post("/learning/import_catalog")
+def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
+    catalog_path = payload.catalog_path
+    data_dir = Path(catalog_path).parent / ".select_mvp_cache"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    out_path = data_dir / "learning_events.jsonl"
+
+    try:
+        items = extract_existing_ratings_for_learning(
+            catalog_path,
+            min_rating=payload.min_rating,
+            limit=payload.limit,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"import failed: {e}")
+
+    event = {
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "job_id": None,
+        "project_name": "historical-import",
+        "catalog_path": catalog_path,
+        "rules": {},
+        "items": items,
+    }
+
+    with out_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+    return {"ok": True, "saved_to": str(out_path), "count": len(items)}
