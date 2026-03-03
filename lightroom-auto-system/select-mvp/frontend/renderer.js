@@ -11,8 +11,9 @@ const shareLearningDataMain = document.getElementById('shareLearningDataMain');
 const shareLearningDataHistory = document.getElementById('shareLearningDataHistory');
 const tabMainBtn = document.getElementById('tabMainBtn');
 const tabLearningBtn = document.getElementById('tabLearningBtn');
-const tabMain = document.getElementById('tabMain');
-const tabLearning = document.getElementById('tabLearning');
+const selectPanel = document.getElementById('selectPanel');
+const learningPanel = document.getElementById('learningPanel');
+const selectResultsPanel = document.getElementById('selectResultsPanel');
 const output = document.getElementById('output');
 const summary = document.getElementById('summary');
 const gallery = document.getElementById('gallery');
@@ -342,8 +343,11 @@ loadExportMappingPrefs();
 
 function showTab(which) {
   const main = which === 'main';
-  tabMain.style.display = main ? 'block' : 'none';
-  tabLearning.style.display = main ? 'none' : 'block';
+  selectPanel.style.display = main ? 'block' : 'none';
+  learningPanel.style.display = main ? 'none' : 'block';
+  selectResultsPanel.style.display = main ? 'grid' : 'none';
+  gallery.style.display = main ? 'grid' : 'none';
+  loadMoreBtn.parentElement.style.display = main ? 'block' : 'none';
   tabMainBtn.classList.toggle('active', main);
   tabLearningBtn.classList.toggle('active', !main);
 }

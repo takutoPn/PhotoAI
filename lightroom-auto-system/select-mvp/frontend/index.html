@@ -37,6 +37,7 @@
     </div>
 
     <div class="card">
+      <div id="selectPanel">
       <label>案件名</label>
       <input id="projectName" value="Wedding A" />
 
@@ -83,16 +84,14 @@
           保存後にLightroomでCatalogを開く
         </label>
       </div>
-      <div style="margin-top:10px;">
-        <div id="tabMain" style="display:block;">
-          <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-bottom:8px;">
-            <input id="shareLearningDataMain" type="checkbox" style="width:auto; margin:0;" />
-            ※ 任意 学習データを共有する
-          </label>
-          <div class="muted" style="margin-bottom:8px;">※ 写真データはアップロードされません。匿名化済み学習イベントのみ対象です。外部共有は行いません。</div>
-        </div>
+      <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-top:10px;">
+        <input id="shareLearningDataMain" type="checkbox" style="width:auto; margin:0;" />
+        ※ 任意 学習データを共有する
+      </label>
+      <div class="muted" style="margin-top:6px;">※ 写真データはアップロードされません。匿名化済み学習イベントのみ対象です。外部共有は行いません。</div>
+      </div>
 
-        <div id="tabLearning" style="display:none;">
+      <div id="learningPanel" style="display:none; margin-top:10px;">
           <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-bottom:8px;">
             <input id="shareLearningDataHistory" type="checkbox" style="width:auto; margin:0;" />
             ※ 任意 学習データを共有する
@@ -107,11 +106,10 @@
             <input id="historyCatalogPath" placeholder="過去Catalog(.lrcat)のパスを指定" style="max-width:520px;" />
             <button id="importHistoryBtn" type="button" style="background:#468;">過去セレクト/レタッチ履歴を学習に取り込む</button>
           </div>
-        </div>
       </div>
     </div>
 
-    <div class="card toolbar" style="grid-template-columns: 180px 180px 220px 1fr;">
+    <div id="selectResultsPanel" class="card toolbar" style="grid-template-columns: 180px 180px 220px 1fr;">
       <div>
         <label>表示フィルタ</label>
         <select id="starFilter">
