@@ -26,9 +26,62 @@
 - 学習イベントは `backend/learning_data/learning_events.enc` に暗号化保存されます。
 - 環境変数 `PHOTOAI_LEARNING_KEY`（base64の32byte鍵）が必須です。
 
-## クイックコマンド
+## クイックコマンド（これは何？）
 ```bash
 git add -A
 git commit -m "feat: 変更内容"
 git push
 ```
+- `git add -A` : 変更したファイルをコミット対象に入れる
+- `git commit -m "..."` : 変更履歴を1つ保存する
+- `git push` : その履歴をGitHubにアップロードする
+
+---
+
+## 起動に必要なツール
+- Git
+- Python 3.12+（推奨 3.12/3.13）
+- Node.js 20+
+- npm
+
+## Windows セットアップ & 起動
+```powershell
+# 1) backend
+cd lightroom-auto-system\select-mvp\backend
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+$env:PHOTOAI_LEARNING_KEY="<base64-32byte-key>"
+python -m uvicorn app.main:app --reload --port 8008
+```
+
+別ターミナルで：
+```powershell
+# 2) frontend
+cd lightroom-auto-system\select-mvp\frontend
+npm install
+npm run dev
+```
+
+## macOS セットアップ & 起動
+```bash
+# 1) backend
+cd lightroom-auto-system/select-mvp/backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export PHOTOAI_LEARNING_KEY="<base64-32byte-key>"
+python -m uvicorn app.main:app --reload --port 8008
+```
+
+別ターミナルで：
+```bash
+# 2) frontend
+cd lightroom-auto-system/select-mvp/frontend
+npm install
+npm run dev
+```
+
+## 補足
+- backend: `http://localhost:8008/health` が `{"ok":true}` なら正常
+- 学習保存先: `lightroom-auto-system/select-mvp/backend/learning_data/learning_events.enc`（暗号化）
