@@ -20,6 +20,9 @@
       .top-tab { background:#2a2a2a; border:1px solid #444; border-bottom:none; color:#ddd; padding:8px 14px; cursor:pointer; }
       .top-tab + .top-tab { border-left:none; }
       .top-tab.active { background:#4a8; color:#fff; }
+      .history-table { width:100%; border-collapse: collapse; margin-top:8px; }
+      .history-table th, .history-table td { border:1px solid #333; padding:6px 8px; font-size:12px; }
+      .history-table th { background:#1f1f1f; }
       #gallery { display: grid; gap: 10px; }
       .item { border: 1px solid #2e2e2e; border-radius: 8px; overflow: hidden; background: #181818; }
       .item img { width: 100%; display: block; background: #000; max-height: 280px; object-fit: cover; }
@@ -86,17 +89,14 @@
       </div>
       <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-top:10px;">
         <input id="shareLearningDataMain" type="checkbox" style="width:auto; margin:0;" />
-        ※ 任意 学習データを共有する
+        任意 学習データを共有する
       </label>
       <div class="muted" style="margin-top:6px;">※ 写真データはアップロードされません。匿名化済み学習イベントのみ対象です。外部共有は行いません。</div>
       </div>
 
       <div id="learningPanel" style="display:none; margin-top:10px;">
-          <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-bottom:8px;">
-            <input id="shareLearningDataHistory" type="checkbox" style="width:auto; margin:0;" />
-            ※ 任意 学習データを共有する
-          </label>
-          <div class="muted" style="margin-bottom:8px;">※ 写真データはアップロードされません。匿名化済み学習イベントのみ対象です。外部共有は行いません。</div>
+          <label>学習タイトル（任意）</label>
+          <input id="learningTitle" placeholder="例: 2025秋ブライダル（未入力時はCatalog名ベースID）" />
           <label>学習取り込み用Catalog (.lrcat)</label>
           <div id="historyDropzone" class="dropzone" title="クリック/ダブルクリックでファイル選択">
             ここに過去 .lrcat をドラッグ&ドロップ<br/>またはクリックしてファイルを選択
@@ -106,6 +106,17 @@
             <input id="historyCatalogPath" placeholder="過去Catalog(.lrcat)のパスを指定" style="max-width:520px;" />
             <button id="importHistoryBtn" type="button" style="background:#468;">過去セレクト/レタッチ履歴を学習に取り込む</button>
           </div>
+          <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-top:10px;">
+            <input id="shareLearningDataHistory" type="checkbox" style="width:auto; margin:0;" />
+            任意 学習データを共有する
+          </label>
+          <div class="muted" style="margin-top:6px;">※ 写真データはアップロードされません。匿名化済み学習イベントのみ対象です。外部共有は行いません。</div>
+
+          <h3 style="margin-top:14px;">記録した学習取り込み履歴</h3>
+          <table class="history-table">
+            <thead><tr><th>No</th><th>タイトル(ID)</th><th>アップロード日付</th><th>撮影日</th></tr></thead>
+            <tbody id="learningHistoryBody"><tr><td colspan="4" class="muted">まだ履歴がありません</td></tr></tbody>
+          </table>
       </div>
     </div>
 

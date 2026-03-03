@@ -7,6 +7,7 @@ from pathlib import Path
 import json
 import os
 import base64
+import hashlib
 from datetime import datetime
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest
@@ -30,6 +31,7 @@ results: dict[str, JobResult] = {}
 # 学習データはCatalog側ではなく backend 配下に集約保存する
 LEARNING_DATA_DIR = Path(__file__).resolve().parents[1] / "learning_data"
 LEARNING_DATA_PATH = LEARNING_DATA_DIR / "learning_events.enc"
+LEARNING_INDEX_PATH = LEARNING_DATA_DIR / "learning_index.jsonl"
 LEARNING_KEY_ENV = "PHOTOAI_LEARNING_KEY"
 
 
@@ -69,6 +71,32 @@ def _append_encrypted_event(out_path: Path, event: dict):
     }
     with out_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(line, ensure_ascii=False) + "\n")
+
+
+def _title_id(title_or_name: str) -> str:
+    s = (title_or_name or "untitled").strip()
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()[:12]
+
+
+def _append_learning_index(entry: dict):
+    with LEARNING_INDEX_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def _read_learning_index(limit: int = 200) -> list[dict]:
+    if not LEARNING_INDEX_PATH.exists():
+        return []
+    rows: list[dict] = []
+    with LEARNING_INDEX_PATH.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except Exception:
+                continue
+    return list(reversed(rows[-limit:]))
 
 
 def _safe_learning_item_from_pick(item):
@@ -153,6 +181,15 @@ def _safe_learning_item_from_catalog_row(row: dict, profile: dict):
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/learning/history")
+def learning_history(limit: int = 200):
+    limit = max(1, min(1000, int(limit)))
+    rows = _read_learning_index(limit=limit)
+    for i, r in enumerate(rows, start=1):
+        r["no"] = i
+    return {"ok": True, "items": rows}
 
 
 @app.post("/jobs", response_model=Job)
@@ -295,6 +332,14 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
     }
     try:
         _append_encrypted_event(out_path, payload)
+        tid = _title_id(job.project_name or "job")
+        _append_learning_index({
+            "title_id": tid,
+            "uploaded_at": payload["ts"],
+            "capture_date": "-",
+            "count": len(result.picks),
+            "source": "job",
+        })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"learn save failed: {e}")
 
@@ -305,6 +350,7 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
         "encrypted": True,
         "share_learning": bool(req.share_learning),
         "external_shared": False,
+        "title_id": tid,
     }
 
 
@@ -325,11 +371,15 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
 
     profile = _build_rating_profile(items)
 
+    source_title = (payload.learning_title or "").strip() or Path(catalog_path).stem
+    tid = _title_id(source_title)
+
     event = {
         "ts": datetime.utcnow().isoformat() + "Z",
         "source": "historical-import",
         "job_id": None,
         "project_name": "historical-import",
+        "title_id": tid,
         "share_learning": bool(payload.share_learning),
         "rules": {"rating_profile": profile},
         # 個人情報/生データ回避: パスは保存しない
@@ -338,6 +388,13 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
 
     try:
         _append_encrypted_event(out_path, event)
+        _append_learning_index({
+            "title_id": tid,
+            "uploaded_at": event["ts"],
+            "capture_date": "-",
+            "count": len(items),
+            "source": "historical-import",
+        })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"import save failed: {e}")
 
@@ -348,4 +405,5 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
         "encrypted": True,
         "share_learning": bool(payload.share_learning),
         "external_shared": False,
+        "title_id": tid,
     }

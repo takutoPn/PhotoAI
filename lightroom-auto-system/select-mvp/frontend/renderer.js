@@ -9,6 +9,8 @@ const historyCatalogFile = document.getElementById('historyCatalogFile');
 const historyDropzone = document.getElementById('historyDropzone');
 const shareLearningDataMain = document.getElementById('shareLearningDataMain');
 const shareLearningDataHistory = document.getElementById('shareLearningDataHistory');
+const learningTitleInput = document.getElementById('learningTitle');
+const learningHistoryBody = document.getElementById('learningHistoryBody');
 const tabMainBtn = document.getElementById('tabMainBtn');
 const tabLearningBtn = document.getElementById('tabLearningBtn');
 const selectPanel = document.getElementById('selectPanel');
@@ -341,6 +343,36 @@ loadMoreBtn.addEventListener('click', () => renderChunk(false));
 });
 loadExportMappingPrefs();
 
+function formatDateTime(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  return d.toLocaleString('ja-JP');
+}
+
+async function refreshLearningHistory() {
+  try {
+    const res = await fetch(`${API}/learning/history?limit=200`);
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    const items = data.items || [];
+    if (!items.length) {
+      learningHistoryBody.innerHTML = '<tr><td colspan="4" class="muted">まだ履歴がありません</td></tr>';
+      return;
+    }
+    learningHistoryBody.innerHTML = items.map((x, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${x.title_id || '-'}</td>
+        <td>${formatDateTime(x.uploaded_at)}</td>
+        <td>${x.capture_date || '-'}</td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    learningHistoryBody.innerHTML = `<tr><td colspan="4">履歴取得エラー: ${e.message}</td></tr>`;
+  }
+}
+
 function showTab(which) {
   const main = which === 'main';
   selectPanel.style.display = main ? 'block' : 'none';
@@ -350,6 +382,7 @@ function showTab(which) {
   loadMoreBtn.parentElement.style.display = main ? 'block' : 'none';
   tabMainBtn.classList.toggle('active', main);
   tabLearningBtn.classList.toggle('active', !main);
+  if (!main) refreshLearningHistory();
 }
 
 tabMainBtn.addEventListener('click', () => showTab('main'));
@@ -431,12 +464,14 @@ importHistoryBtn.addEventListener('click', async () => {
         catalog_path: catalogPath,
         min_rating: 1,
         limit: 50000,
-        share_learning: !!shareLearningDataHistory?.checked
+        share_learning: !!shareLearningDataHistory?.checked,
+        learning_title: learningTitleInput?.value?.trim() || null
       })
     });
     if (!res.ok) throw new Error(await res.text());
     const info = await res.json();
-    output.textContent = `過去データ取り込み完了: ${info.count}件\n保存先: ${info.saved_to}\n共有設定: ${info.share_learning ? 'ON(任意)' : 'OFF'}\n外部共有: ${info.external_shared ? 'あり' : 'なし'}`;
+    output.textContent = `過去データ取り込み完了: ${info.count}件\nタイトルID: ${info.title_id || '-'}\n保存先: ${info.saved_to}\n共有設定: ${info.share_learning ? 'ON(任意)' : 'OFF'}\n外部共有: ${info.external_shared ? 'あり' : 'なし'}`;
+    refreshLearningHistory();
   } catch (e) {
     output.textContent = `過去データ取り込みエラー: ${e.message}`;
   }

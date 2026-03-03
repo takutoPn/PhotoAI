@@ -60,6 +60,7 @@ class ImportCatalogLearningRequest(BaseModel):
     min_rating: int = Field(default=1, ge=0, le=5)
     limit: int = Field(default=20000, ge=1, le=200000)
     share_learning: bool = False
+    learning_title: str | None = None
 
 
 class ExportMapping(BaseModel):
