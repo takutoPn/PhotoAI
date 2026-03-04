@@ -248,6 +248,16 @@ def learning_history(limit: int = 200):
     return {"ok": True, "items": rows}
 
 
+@app.delete("/learning/history/{source_id}")
+def delete_learning_history(source_id: str):
+    rows = _read_learning_index(limit=100000)
+    kept = [r for r in rows if r.get("source_id") != source_id]
+    with LEARNING_INDEX_PATH.open("w", encoding="utf-8") as f:
+        for r in kept:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    return {"ok": True, "deleted": len(rows) - len(kept)}
+
+
 @app.post("/jobs", response_model=Job)
 def create_job(payload: JobCreate):
     job_id = str(uuid4())
@@ -390,6 +400,7 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
         _append_encrypted_event(out_path, payload)
         tid = _title_id(job.project_name or "job")
         _append_learning_index({
+            "title": job.project_name or "job",
             "title_id": tid,
             "uploaded_at": payload["ts"],
             "capture_date": "-",
@@ -449,6 +460,7 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
         _append_encrypted_event(out_path, event)
         _upsert_learning_index({
             "source_id": sid,
+            "title": source_title,
             "title_id": tid,
             "uploaded_at": event["ts"],
             "capture_date": _capture_date_range(items),

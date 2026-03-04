@@ -356,6 +356,14 @@ function formatDateTime(iso) {
   return `${y}/${m}/${day}(${w}) ${hh}:${mm}`;
 }
 
+async function deleteLearningHistory(sourceId) {
+  if (!sourceId) return;
+  const ok = window.confirm('この学習履歴を削除しますか？');
+  if (!ok) return;
+  const res = await fetch(`${API}/learning/history/${encodeURIComponent(sourceId)}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(await res.text());
+}
+
 async function refreshLearningHistory() {
   try {
     const res = await fetch(`${API}/learning/history?limit=200`);
@@ -369,11 +377,22 @@ async function refreshLearningHistory() {
     learningHistoryBody.innerHTML = items.map((x, idx) => `
       <tr>
         <td>${idx + 1}</td>
-        <td>${x.title_id || '-'}</td>
+        <td>${x.title || x.title_id || '-'}</td>
         <td>${formatDateTime(x.uploaded_at)}</td>
-        <td>${x.capture_date || '-'}<br/><span class="muted">${x.rating_summary || '-'}</span></td>
+        <td>${x.capture_date || '-'}<br/><span class="muted">${x.rating_summary || '-'}</span><br/><button class="delete-history" data-source-id="${x.source_id || ''}" style="margin-top:4px; background:#933;">削除</button></td>
       </tr>
     `).join('');
+
+    learningHistoryBody.querySelectorAll('.delete-history').forEach((btn) => {
+      btn.addEventListener('click', async (ev) => {
+        try {
+          await deleteLearningHistory(ev.currentTarget.dataset.sourceId);
+          await refreshLearningHistory();
+        } catch (e) {
+          output.textContent = `履歴削除エラー: ${e.message}`;
+        }
+      });
+    });
   } catch (e) {
     const msg = String(e.message || e);
     if (msg.includes('Not Found')) {
