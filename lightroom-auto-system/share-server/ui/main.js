@@ -47,6 +47,7 @@ function startBackend() {
   const s = loadSettings();
   const secret = ensureSecret(s);
   const port = Number(s.port || 9000);
+  const dataDir = String(s.dataDir || '').trim();
 
   backendProc = spawn(exe, [], {
     cwd: path.dirname(exe),
@@ -55,7 +56,8 @@ function startBackend() {
     env: {
       ...process.env,
       PHOTOAI_SHARE_SECRET: secret,
-      PHOTOAI_SHARE_PORT: String(port)
+      PHOTOAI_SHARE_PORT: String(port),
+      PHOTOAI_SHARE_DATA_DIR: dataDir
     }
   });
 
@@ -81,15 +83,24 @@ function createWindow() {
 ipcMain.handle('settings:get', () => {
   const s = loadSettings();
   const secret = ensureSecret(s);
-  return { ...s, secret, port: Number(s.port || 9000) };
+  return { ...s, secret, port: Number(s.port || 9000), dataDir: s.dataDir || '' };
 });
 
 ipcMain.handle('settings:save', (_e, payload) => {
   const s = loadSettings();
   s.secret = String(payload?.secret || '').trim();
   s.port = Number(payload?.port || 9000);
+  s.dataDir = String(payload?.dataDir || '').trim();
   saveSettings(s);
   return { ok: true };
+});
+
+ipcMain.handle('folder:choose', async () => {
+  const { canceled, filePaths } = await require('electron').dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (canceled || !filePaths?.length) return { ok: false };
+  return { ok: true, path: filePaths[0] };
 });
 
 ipcMain.handle('backend:start', () => startBackend());

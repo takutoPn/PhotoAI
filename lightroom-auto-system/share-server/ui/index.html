@@ -18,7 +18,15 @@
 
   <div class="card">
     <label>Shared Secret</label>
-    <input id="secret" />
+    <div style="display:flex; gap:8px;">
+      <input id="secret" type="password" />
+      <button id="toggleSecretBtn" style="background:#555;">表示</button>
+    </div>
+    <label>保存フォルダ</label>
+    <div style="display:flex; gap:8px;">
+      <input id="dataDir" placeholder="未指定なら既定フォルダ" />
+      <button id="chooseDirBtn" style="background:#555;">選択</button>
+    </div>
     <label>Port</label>
     <input id="port" type="number" value="9000" />
     <div style="margin-top:12px;">
@@ -35,17 +43,35 @@
   <script>
     const secret = document.getElementById('secret');
     const port = document.getElementById('port');
+    const dataDir = document.getElementById('dataDir');
     const log = document.getElementById('log');
+    const toggleSecretBtn = document.getElementById('toggleSecretBtn');
 
     async function init() {
       const s = await window.shareServer.getSettings();
       secret.value = s.secret || '';
       port.value = s.port || 9000;
+      dataDir.value = s.dataDir || '';
       log.textContent = '設定を読み込みました';
     }
 
+    toggleSecretBtn.onclick = () => {
+      const isPwd = secret.type === 'password';
+      secret.type = isPwd ? 'text' : 'password';
+      toggleSecretBtn.textContent = isPwd ? '非表示' : '表示';
+    };
+
+    document.getElementById('chooseDirBtn').onclick = async () => {
+      const r = await window.shareServer.chooseFolder();
+      if (r?.ok && r.path) dataDir.value = r.path;
+    };
+
     document.getElementById('saveBtn').onclick = async () => {
-      await window.shareServer.saveSettings({ secret: secret.value, port: Number(port.value || 9000) });
+      await window.shareServer.saveSettings({
+        secret: secret.value,
+        port: Number(port.value || 9000),
+        dataDir: dataDir.value
+      });
       log.textContent = '設定を保存しました';
     };
 

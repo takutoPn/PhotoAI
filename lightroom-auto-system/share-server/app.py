@@ -6,10 +6,14 @@ from datetime import datetime
 
 app = FastAPI(title="Selectra AI Share Server", version="0.1.0")
 
-DATA_DIR = Path(__file__).resolve().parent / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-OUT = DATA_DIR / "shared_learning_events.jsonl"
 SECRET_ENV = "PHOTOAI_SHARE_SECRET"
+DATA_DIR_ENV = "PHOTOAI_SHARE_DATA_DIR"
+
+
+def _out_path() -> Path:
+    d = Path((os.getenv(DATA_DIR_ENV, "") or "").strip() or (Path(__file__).resolve().parent / "data"))
+    d.mkdir(parents=True, exist_ok=True)
+    return d / "shared_learning_events.jsonl"
 
 
 @app.get('/health')
@@ -33,19 +37,21 @@ def learning_import(payload: dict, x_shared_secret: str | None = Header(default=
         "received_at": datetime.utcnow().isoformat() + "Z",
         "payload": payload,
     }
-    with OUT.open('a', encoding='utf-8') as f:
+    out = _out_path()
+    with out.open('a', encoding='utf-8') as f:
         f.write(json.dumps(row, ensure_ascii=False) + '\n')
-    return {"ok": True}
+    return {"ok": True, "saved_to": str(out)}
 
 
 @app.get('/learning/export')
 def learning_export(limit: int = 500, x_shared_secret: str | None = Header(default=None)):
     _check_secret(x_shared_secret)
-    if not OUT.exists():
+    out = _out_path()
+    if not out.exists():
         return {"ok": True, "items": []}
 
     rows = []
-    with OUT.open('r', encoding='utf-8') as f:
+    with out.open('r', encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if not line:
