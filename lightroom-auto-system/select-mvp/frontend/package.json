@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "dev": "electron .",
-    "dist:win": "electron-builder --win nsis --x64"
+    "build:backend:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ../backend/scripts/build-backend-win.ps1",
+    "dist:win": "npm run build:backend:win && electron-builder --win nsis --x64"
   },
   "devDependencies": {
     "electron": "^31.0.2",
@@ -22,6 +23,10 @@
       "!dist/**"
     ],
     "extraResources": [
+      {
+        "from": "../backend/dist/selectra-backend.exe",
+        "to": "backend/selectra-backend.exe"
+      },
       {
         "from": "../backend/app",
         "to": "backend/app"

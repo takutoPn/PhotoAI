@@ -46,9 +46,15 @@ function resolveBackendDir() {
 
   // パッケージ後: resources/backend
   const prodDir = path.join(process.resourcesPath, 'backend');
-  if (fs.existsSync(path.join(prodDir, 'app', 'main.py'))) return prodDir;
+  if (fs.existsSync(path.join(prodDir, 'app', 'main.py')) || fs.existsSync(path.join(prodDir, 'selectra-backend.exe'))) return prodDir;
 
   return null;
+}
+
+function resolveBackendExe(backendDir) {
+  if (!backendDir) return null;
+  const exe = path.join(backendDir, 'selectra-backend.exe');
+  return fs.existsSync(exe) ? exe : null;
 }
 
 function getPythonCandidates() {
@@ -145,28 +151,38 @@ async function ensureBackend() {
     return false;
   }
 
-  const py = pickPythonCommand();
-  if (!py) {
-    dialog.showErrorBox('Selectra AI', 'Python 3.11+ が見つかりません。インストール後に再起動してください。');
-    return false;
-  }
-
   const env = { ...process.env };
   ensureLearningKey(env);
 
-  const deps = ensureBackendDependencies(py, backendDir);
-  if (!deps.ok) {
-    dialog.showErrorBox('Selectra AI', `バックエンド依存関係のインストールに失敗しました。\nPython: ${py.label}\n理由: ${deps.reason || 'unknown'}\nログ: ${deps.logPath}`);
-    return false;
-  }
+  const backendExe = resolveBackendExe(backendDir);
+  if (backendExe) {
+    backendProc = spawn(backendExe, [], {
+      cwd: backendDir,
+      env,
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+  } else {
+    const py = pickPythonCommand();
+    if (!py) {
+      dialog.showErrorBox('Selectra AI', 'Python 3.11+ が見つかりません。インストール後に再起動してください。');
+      return false;
+    }
 
-  const args = [...py.args, '-m', 'uvicorn', '--app-dir', backendDir, 'app.main:app', '--host', '127.0.0.1', '--port', '8008'];
-  backendProc = spawn(py.cmd, args, {
-    cwd: backendDir,
-    env,
-    windowsHide: true,
-    stdio: 'ignore',
-  });
+    const deps = ensureBackendDependencies(py, backendDir);
+    if (!deps.ok) {
+      dialog.showErrorBox('Selectra AI', `バックエンド依存関係のインストールに失敗しました。\nPython: ${py.label}\n理由: ${deps.reason || 'unknown'}\nログ: ${deps.logPath}`);
+      return false;
+    }
+
+    const args = [...py.args, '-m', 'uvicorn', '--app-dir', backendDir, 'app.main:app', '--host', '127.0.0.1', '--port', '8008'];
+    backendProc = spawn(py.cmd, args, {
+      cwd: backendDir,
+      env,
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+  }
 
   const ok = await waitHealth(15000);
   if (!ok) {
