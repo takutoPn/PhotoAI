@@ -43,6 +43,15 @@ python -m uvicorn app.main:app --reload --port 8008
 
 API: `http://localhost:8008`
 
+### 共有機能（Tailscale限定）
+`任意 学習データを共有する` をONにした場合のみ送信します。
+
+backend 側環境変数:
+- `PHOTOAI_SHARE_URL` 例: `http://100.109.167.71:9000/learning/import`
+- `PHOTOAI_SHARE_SECRET` 共有サーバと一致する秘密文字列
+
+> 送信先は `100.x.x.x` または `.ts.net` のみ許可（Tailscale内限定）。
+
 ## 2) Frontend 起動
 
 ```bash

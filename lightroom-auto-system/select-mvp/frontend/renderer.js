@@ -474,7 +474,7 @@ learnBtn.addEventListener('click', async () => {
     });
     if (!res.ok) throw new Error(await res.text());
     const info = await res.json();
-    output.textContent = `学習データ追加: ${info.count}件\n保存先: ${info.saved_to}\n共有設定: ${info.share_learning ? 'ON(任意)' : 'OFF'}\n外部共有: ${info.external_shared ? 'あり' : 'なし'}`;
+    output.textContent = `学習データ追加: ${info.count}件\n保存先: ${info.saved_to}\n共有設定: ${info.share_learning ? 'ON(任意)' : 'OFF'}\n外部共有: ${info.external_shared ? 'あり' : 'なし'}\n共有結果: ${info.share_message || '-'}`;
   } catch (e) {
     output.textContent = `学習データ追加エラー: ${e.message}`;
   }
@@ -501,7 +501,7 @@ importHistoryBtn.addEventListener('click', async () => {
     });
     if (!res.ok) throw new Error(await res.text());
     const info = await res.json();
-    output.textContent = `過去データ取り込み完了: ${info.count}件\nタイトルID: ${info.title_id || '-'}\n保存先: ${info.saved_to}\n共有設定: ${info.share_learning ? 'ON(任意)' : 'OFF'}\n外部共有: ${info.external_shared ? 'あり' : 'なし'}`;
+    output.textContent = `過去データ取り込み完了: ${info.count}件\nタイトルID: ${info.title_id || '-'}\n保存先: ${info.saved_to}\n共有設定: ${info.share_learning ? 'ON(任意)' : 'OFF'}\n外部共有: ${info.external_shared ? 'あり' : 'なし'}\n共有結果: ${info.share_message || '-'}`;
     refreshLearningHistory();
   } catch (e) {
     output.textContent = `過去データ取り込みエラー: ${e.message}`;

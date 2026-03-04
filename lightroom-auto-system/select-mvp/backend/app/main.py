@@ -9,6 +9,8 @@ import os
 import base64
 import hashlib
 from datetime import datetime
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest
 from .selector import run_selection
@@ -33,6 +35,8 @@ LEARNING_DATA_DIR = Path(__file__).resolve().parents[1] / "learning_data"
 LEARNING_DATA_PATH = LEARNING_DATA_DIR / "learning_events.enc"
 LEARNING_INDEX_PATH = LEARNING_DATA_DIR / "learning_index.jsonl"
 LEARNING_KEY_ENV = "PHOTOAI_LEARNING_KEY"
+SHARE_URL_ENV = "PHOTOAI_SHARE_URL"
+SHARE_SECRET_ENV = "PHOTOAI_SHARE_SECRET"
 
 
 def _get_learning_key() -> bytes:
@@ -164,6 +168,42 @@ def _read_learning_index(limit: int = 200) -> list[dict]:
             except Exception:
                 continue
     return list(reversed(rows[-limit:]))
+
+
+def _is_tailscale_url(url: str) -> bool:
+    try:
+        p = urlparse(url)
+        host = (p.hostname or "").lower()
+        return host.startswith("100.") or host.endswith(".ts.net")
+    except Exception:
+        return False
+
+
+def _share_learning_event(event: dict) -> tuple[bool, str]:
+    share_url = (os.getenv(SHARE_URL_ENV, "") or "").strip()
+    share_secret = (os.getenv(SHARE_SECRET_ENV, "") or "").strip()
+    if not share_url:
+        return False, f"missing env: {SHARE_URL_ENV}"
+    if not share_secret:
+        return False, f"missing env: {SHARE_SECRET_ENV}"
+    if not _is_tailscale_url(share_url):
+        return False, "share url must be tailscale-only (100.x or .ts.net)"
+
+    body = json.dumps(event, ensure_ascii=False).encode("utf-8")
+    req = Request(
+        share_url,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Shared-Secret": share_secret,
+        },
+        method="POST",
+    )
+    with urlopen(req, timeout=8) as resp:
+        code = int(getattr(resp, "status", 200))
+        if code < 200 or code >= 300:
+            return False, f"http {code}"
+    return True, "ok"
 
 
 def _safe_learning_item_from_pick(item):
@@ -419,6 +459,10 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
             "count": len(result.picks),
             "source": "job",
         })
+        shared_ok = False
+        share_msg = "disabled"
+        if req.share_learning:
+            shared_ok, share_msg = _share_learning_event(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"learn save failed: {e}")
 
@@ -428,7 +472,8 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
         "count": len(result.picks),
         "encrypted": True,
         "share_learning": bool(req.share_learning),
-        "external_shared": False,
+        "external_shared": bool(shared_ok),
+        "share_message": share_msg,
         "title_id": tid,
     }
 
@@ -485,6 +530,10 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
             "count": len(items),
             "source": "historical-import",
         })
+        shared_ok = False
+        share_msg = "disabled"
+        if payload.share_learning:
+            shared_ok, share_msg = _share_learning_event(event)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"import save failed: {e}")
 
@@ -494,7 +543,8 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
         "count": len(items),
         "encrypted": True,
         "share_learning": bool(payload.share_learning),
-        "external_shared": False,
+        "external_shared": bool(shared_ok),
+        "share_message": share_msg,
         "title_id": tid,
         "source_id": sid,
     }
