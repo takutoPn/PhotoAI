@@ -51,12 +51,28 @@ function resolveBackendDir() {
   return null;
 }
 
-function pickPythonCommand() {
+function getPythonCandidates() {
   if (process.env.PHOTOAI_PYTHON_PATH) {
-    return { cmd: process.env.PHOTOAI_PYTHON_PATH, args: [] };
+    return [{ cmd: process.env.PHOTOAI_PYTHON_PATH, args: [], label: 'PHOTOAI_PYTHON_PATH' }];
   }
-  // Windows想定: pyランチャ優先
-  return { cmd: 'py', args: ['-3'] };
+  return [
+    { cmd: 'py', args: ['-3.13'], label: 'py -3.13' },
+    { cmd: 'py', args: ['-3.12'], label: 'py -3.12' },
+    { cmd: 'py', args: ['-3.11'], label: 'py -3.11' },
+    { cmd: 'py', args: ['-3'], label: 'py -3' },
+    { cmd: 'python', args: [], label: 'python' },
+  ];
+}
+
+function pickPythonCommand() {
+  const candidates = getPythonCandidates();
+  for (const c of candidates) {
+    try {
+      const r = spawnSync(c.cmd, [...c.args, '--version'], { windowsHide: true, stdio: 'pipe', timeout: 5000 });
+      if (r.status === 0) return c;
+    } catch (_) {}
+  }
+  return null;
 }
 
 function ensureLearningKey(env) {
@@ -68,23 +84,34 @@ function ensureLearningKey(env) {
 
 function ensureBackendDependencies(py, backendDir) {
   const marker = path.join(app.getPath('userData'), 'backend_deps.ok');
-  if (fs.existsSync(marker)) return true;
+  const logPath = path.join(app.getPath('userData'), 'backend_bootstrap.log');
+  if (fs.existsSync(marker)) return { ok: true, logPath };
 
   const req = path.join(backendDir, 'requirements.txt');
-  if (!fs.existsSync(req)) return false;
+  if (!fs.existsSync(req)) return { ok: false, logPath, reason: 'requirements.txt not found' };
 
-  const pipArgs = [...py.args, '-m', 'pip', 'install', '-r', req];
-  const r = spawnSync(py.cmd, pipArgs, {
+  const run = (args) => spawnSync(py.cmd, args, {
     cwd: backendDir,
     windowsHide: true,
-    stdio: 'ignore',
-    timeout: 1000 * 60 * 5,
+    stdio: 'pipe',
+    timeout: 1000 * 60 * 8,
   });
+
+  let out = '';
+  const r0 = run([...py.args, '-m', 'ensurepip', '--upgrade']);
+  out += `[ensurepip]\n${(r0.stdout || '').toString()}\n${(r0.stderr || '').toString()}\n`;
+
+  const pipArgs = [...py.args, '-m', 'pip', 'install', '--disable-pip-version-check', '-r', req];
+  const r = run(pipArgs);
+  out += `[pip]\n${(r.stdout || '').toString()}\n${(r.stderr || '').toString()}\n`;
+
+  try { fs.writeFileSync(logPath, out); } catch (_) {}
+
   if (r.status === 0) {
     try { fs.writeFileSync(marker, 'ok'); } catch (_) {}
-    return true;
+    return { ok: true, logPath };
   }
-  return false;
+  return { ok: false, logPath, reason: `pip failed (${r.status})` };
 }
 
 function waitHealth(timeoutMs = 12000) {
@@ -119,12 +146,17 @@ async function ensureBackend() {
   }
 
   const py = pickPythonCommand();
+  if (!py) {
+    dialog.showErrorBox('Selectra AI', 'Python 3.11+ が見つかりません。インストール後に再起動してください。');
+    return false;
+  }
+
   const env = { ...process.env };
   ensureLearningKey(env);
 
-  const depsOk = ensureBackendDependencies(py, backendDir);
-  if (!depsOk) {
-    dialog.showErrorBox('Selectra AI', 'バックエンド依存関係のインストールに失敗しました。ネット接続とPythonを確認してください。');
+  const deps = ensureBackendDependencies(py, backendDir);
+  if (!deps.ok) {
+    dialog.showErrorBox('Selectra AI', `バックエンド依存関係のインストールに失敗しました。\nPython: ${py.label}\n理由: ${deps.reason || 'unknown'}\nログ: ${deps.logPath}`);
     return false;
   }
 
