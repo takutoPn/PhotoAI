@@ -53,9 +53,15 @@ function resolveBackendDir() {
 
 function resolveBackendExe(backendDir) {
   const candidates = [];
-  if (backendDir) candidates.push(path.join(backendDir, 'selectra-backend.exe'));
-  candidates.push(path.join(process.resourcesPath || '', 'backend', 'selectra-backend.exe'));
-  candidates.push(path.resolve(__dirname, '..', 'backend', 'dist', 'selectra-backend.exe'));
+  if (process.platform === 'win32') {
+    if (backendDir) candidates.push(path.join(backendDir, 'selectra-backend.exe'));
+    candidates.push(path.join(process.resourcesPath || '', 'backend', 'selectra-backend.exe'));
+    candidates.push(path.resolve(__dirname, '..', 'backend', 'dist', 'selectra-backend.exe'));
+  } else if (process.platform === 'darwin') {
+    if (backendDir) candidates.push(path.join(backendDir, 'selectra-backend-mac-arm64'));
+    candidates.push(path.join(process.resourcesPath || '', 'backend', 'selectra-backend-mac-arm64'));
+    candidates.push(path.resolve(__dirname, '..', 'backend', 'dist', 'selectra-backend-mac-arm64'));
+  }
 
   for (const p of candidates) {
     try {

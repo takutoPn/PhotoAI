@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "electron .",
     "build:backend:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ../backend/scripts/build-backend-win.ps1",
-    "dist:win": "npm run build:backend:win && electron-builder --win nsis --x64"
+    "build:backend:mac": "bash ../backend/scripts/build-backend-mac.sh",
+    "dist:win": "npm run build:backend:win && electron-builder --win nsis --x64",
+    "dist:mac": "npm run build:backend:mac && electron-builder --mac dmg --arm64"
   },
   "devDependencies": {
     "electron": "^31.0.2",
@@ -26,6 +28,10 @@
       {
         "from": "../backend/dist/selectra-backend.exe",
         "to": "backend/selectra-backend.exe"
+      },
+      {
+        "from": "../backend/dist/selectra-backend-mac-arm64",
+        "to": "backend/selectra-backend-mac-arm64"
       },
       {
         "from": "../backend/app",

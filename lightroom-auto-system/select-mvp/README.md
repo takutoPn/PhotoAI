@@ -52,6 +52,17 @@ backend 側環境変数:
 
 > 送信先は `100.x.x.x` または `.ts.net` のみ許可（Tailscale内限定）。
 
+### macOS (Apple Silicon) ワンコマンドビルド
+M1/M2/M3 Mac で実行:
+```bash
+cd lightroom-auto-system/select-mvp/frontend
+npm install
+npm run dist:mac
+```
+
+出力: `frontend/dist/*.dmg`
+（内部で backend の mac-arm64 バイナリも自動ビルドして同梱）
+
 ## 2) Frontend 起動
 
 ```bash
