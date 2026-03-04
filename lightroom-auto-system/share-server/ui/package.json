@@ -1,0 +1,25 @@
+{
+  "name": "selectra-share-server-ui",
+  "productName": "Selectra Share Server",
+  "version": "0.1.0",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron .",
+    "build:backend:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/build-backend-win.ps1",
+    "dist:win": "npm run build:backend:win && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^31.0.2",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "ai.selectra.share-server",
+    "directories": { "output": "dist" },
+    "files": ["**/*", "!dist/**"],
+    "extraResources": [
+      { "from": "../dist/selectra-share-server-backend.exe", "to": "backend/selectra-share-server-backend.exe" }
+    ],
+    "win": { "target": ["nsis"] }
+  }
+}
