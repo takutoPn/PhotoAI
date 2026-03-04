@@ -33,14 +33,37 @@ results: dict[str, JobResult] = {}
 
 # 学習データはデフォルトで backend 配下。設定で変更可能
 LEARNING_DIR_ENV = "PHOTOAI_LEARNING_DATA_DIR"
-SETTINGS_PATH = Path(__file__).resolve().parents[1] / "settings.json"
-LEARNING_DATA_DIR = Path(os.getenv(LEARNING_DIR_ENV, "") or (Path(__file__).resolve().parents[1] / "learning_data"))
+CONFIG_DIR_ENV = "PHOTOAI_CONFIG_DIR"
+
+
+def _default_config_dir() -> Path:
+    # 優先: 明示指定 → Windows AppData/Roaming → backend配下
+    v = (os.getenv(CONFIG_DIR_ENV, "") or "").strip()
+    if v:
+        return Path(v)
+    appdata = (os.getenv("APPDATA", "") or "").strip()
+    if appdata:
+        return Path(appdata) / "Selectra AI"
+    return Path(__file__).resolve().parents[1]
+
+
+SETTINGS_PATH = _default_config_dir() / "settings.json"
+LEARNING_DATA_DIR = Path(os.getenv(LEARNING_DIR_ENV, "") or (_default_config_dir() / "learning_data"))
 LEARNING_KEY_ENV = "PHOTOAI_LEARNING_KEY"
 SHARE_URL_ENV = "PHOTOAI_SHARE_URL"
 SHARE_SECRET_ENV = "PHOTOAI_SHARE_SECRET"
 
 
 def _load_settings() -> dict:
+    # 旧保存先(backend/settings.json)がある場合は初回だけ移行
+    legacy = Path(__file__).resolve().parents[1] / "settings.json"
+    if not SETTINGS_PATH.exists() and legacy.exists():
+        try:
+            SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+            SETTINGS_PATH.write_text(legacy.read_text(encoding="utf-8"), encoding="utf-8")
+        except Exception:
+            pass
+
     if not SETTINGS_PATH.exists():
         return {}
     try:

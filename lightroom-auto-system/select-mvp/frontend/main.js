@@ -160,6 +160,7 @@ async function ensureBackend() {
   }
 
   const env = { ...process.env };
+  env.PHOTOAI_CONFIG_DIR = app.getPath('userData');
   ensureLearningKey(env);
 
   const backendExe = resolveBackendExe(backendDir);
