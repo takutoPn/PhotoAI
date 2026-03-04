@@ -1,12 +1,30 @@
 {
   "name": "selectra-ai-ui",
+  "productName": "Selectra AI",
   "version": "0.1.0",
   "main": "main.js",
   "private": true,
   "scripts": {
-    "dev": "electron ."
+    "dev": "electron .",
+    "dist:win": "electron-builder --win nsis --x64"
   },
   "devDependencies": {
-    "electron": "^31.0.2"
+    "electron": "^31.0.2",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "ai.selectra.desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
   }
 }
