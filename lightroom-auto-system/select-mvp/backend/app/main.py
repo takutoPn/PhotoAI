@@ -12,7 +12,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest
+from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest, LearningDirRequest
 from .selector import run_selection
 from .catalog import parse_catalog_assets
 from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning, extract_catalog_date_range
@@ -30,13 +30,20 @@ app.add_middleware(
 jobs: dict[str, Job] = {}
 results: dict[str, JobResult] = {}
 
-# 学習データはCatalog側ではなく backend 配下に集約保存する
-LEARNING_DATA_DIR = Path(__file__).resolve().parents[1] / "learning_data"
-LEARNING_DATA_PATH = LEARNING_DATA_DIR / "learning_events.enc"
-LEARNING_INDEX_PATH = LEARNING_DATA_DIR / "learning_index.jsonl"
+# 学習データはデフォルトで backend 配下。設定で変更可能
+LEARNING_DIR_ENV = "PHOTOAI_LEARNING_DATA_DIR"
+LEARNING_DATA_DIR = Path(os.getenv(LEARNING_DIR_ENV, "") or (Path(__file__).resolve().parents[1] / "learning_data"))
 LEARNING_KEY_ENV = "PHOTOAI_LEARNING_KEY"
 SHARE_URL_ENV = "PHOTOAI_SHARE_URL"
 SHARE_SECRET_ENV = "PHOTOAI_SHARE_SECRET"
+
+
+def _learning_paths() -> tuple[Path, Path, Path]:
+    global LEARNING_DATA_DIR
+    LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    data_path = LEARNING_DATA_DIR / "learning_events.enc"
+    index_path = LEARNING_DATA_DIR / "learning_index.jsonl"
+    return LEARNING_DATA_DIR, data_path, index_path
 
 
 def _get_learning_key() -> bytes:
@@ -132,7 +139,8 @@ def _capture_date_range(items: list[dict]) -> str:
 
 
 def _append_learning_index(entry: dict):
-    with LEARNING_INDEX_PATH.open("a", encoding="utf-8") as f:
+    _, _, index_path = _learning_paths()
+    with index_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
@@ -148,17 +156,18 @@ def _upsert_learning_index(entry: dict, key: str = "source_id"):
     if not matched:
         rows.append(entry)
 
-    LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with LEARNING_INDEX_PATH.open("w", encoding="utf-8") as f:
+    _, _, index_path = _learning_paths()
+    with index_path.open("w", encoding="utf-8") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
 def _read_learning_index(limit: int = 200) -> list[dict]:
-    if not LEARNING_INDEX_PATH.exists():
+    _, _, index_path = _learning_paths()
+    if not index_path.exists():
         return []
     rows: list[dict] = []
-    with LEARNING_INDEX_PATH.open("r", encoding="utf-8") as f:
+    with index_path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -290,6 +299,22 @@ def health():
     return {"ok": True}
 
 
+@app.get("/settings")
+def get_settings():
+    d, _, _ = _learning_paths()
+    return {"ok": True, "learning_data_dir": str(d)}
+
+
+@app.post("/settings/learning-dir")
+def set_learning_dir(payload: LearningDirRequest):
+    global LEARNING_DATA_DIR
+    p = Path(payload.path).expanduser().resolve()
+    p.mkdir(parents=True, exist_ok=True)
+    LEARNING_DATA_DIR = p
+    os.environ[LEARNING_DIR_ENV] = str(p)
+    return {"ok": True, "learning_data_dir": str(LEARNING_DATA_DIR)}
+
+
 @app.get("/learning/history")
 def learning_history(limit: int = 200):
     limit = max(1, min(1000, int(limit)))
@@ -303,7 +328,8 @@ def learning_history(limit: int = 200):
 def delete_learning_history(source_id: str):
     rows = _read_learning_index(limit=100000)
     kept = [r for r in rows if r.get("source_id") != source_id]
-    with LEARNING_INDEX_PATH.open("w", encoding="utf-8") as f:
+    _, _, index_path = _learning_paths()
+    with index_path.open("w", encoding="utf-8") as f:
         for r in kept:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     return {"ok": True, "deleted": len(rows) - len(kept)}
@@ -432,8 +458,7 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
     if not job or not result:
         raise HTTPException(status_code=404, detail="job/result not found")
 
-    LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = LEARNING_DATA_PATH
+    _, out_path, _ = _learning_paths()
 
     req = payload or LearnRequest()
 
@@ -481,8 +506,7 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
 @app.post("/learning/import_catalog")
 def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
     catalog_path = payload.catalog_path
-    LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = LEARNING_DATA_PATH
+    _, out_path, _ = _learning_paths()
 
     try:
         items = extract_existing_ratings_for_learning(

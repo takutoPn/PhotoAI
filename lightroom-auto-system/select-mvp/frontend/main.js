@@ -221,6 +221,14 @@ ipcMain.handle('open-lightroom', async (_evt, catalogPath) => {
   }
 });
 
+ipcMain.handle('choose-folder', async () => {
+  const res = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  if (res.canceled || !res.filePaths?.length) return { ok: false };
+  return { ok: true, path: res.filePaths[0] };
+});
+
 app.whenReady().then(async () => {
   await ensureBackend();
   createWindow();

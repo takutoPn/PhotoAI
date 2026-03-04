@@ -42,6 +42,7 @@
     <div class="top-tabs">
       <button id="tabMainBtn" class="top-tab active" type="button">セレクト</button>
       <button id="tabLearningBtn" class="top-tab" type="button">学習取り込み</button>
+      <button id="tabSettingsBtn" class="top-tab" type="button">設定</button>
     </div>
 
     <div class="card">
@@ -120,8 +121,19 @@
           <h3 style="margin-top:14px;">記録した学習取り込み履歴</h3>
           <table class="history-table">
             <thead><tr><th class="col-no">No</th><th class="col-title">タイトル</th><th class="col-upload">アップロード日付</th><th class="col-capture">レート内訳</th><th class="col-action">操作</th></tr></thead>
-            <tbody id="learningHistoryBody"><tr><td colspan="4" class="muted">まだ履歴がありません</td></tr></tbody>
+            <tbody id="learningHistoryBody"><tr><td colspan="5" class="muted">まだ履歴がありません</td></tr></tbody>
           </table>
+      </div>
+
+      <div id="settingsPanel" style="display:none; margin-top:10px;">
+        <h3>保存先設定</h3>
+        <label>学習履歴の保存フォルダ</label>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <input id="learningDirPath" placeholder="保存先フォルダを指定" style="max-width:620px;" />
+          <button id="chooseLearningDirBtn" type="button" style="background:#357;">フォルダを選択</button>
+          <button id="saveLearningDirBtn" type="button" style="background:#4a8;">保存先を適用</button>
+        </div>
+        <div class="muted" style="margin-top:6px;">適用後は新規学習データからこの保存先を使用します。</div>
       </div>
     </div>
 

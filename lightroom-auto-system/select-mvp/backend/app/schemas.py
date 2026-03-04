@@ -67,3 +67,7 @@ class ExportMapping(BaseModel):
     selected_star: int = Field(default=3, ge=0, le=5)
     reserve_star: int = Field(default=1, ge=0, le=5)
     reject_star: int = Field(default=0, ge=0, le=5)
+
+
+class LearningDirRequest(BaseModel):
+    path: str

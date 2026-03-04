@@ -13,9 +13,14 @@ const learningTitleInput = document.getElementById('learningTitle');
 const learningHistoryBody = document.getElementById('learningHistoryBody');
 const tabMainBtn = document.getElementById('tabMainBtn');
 const tabLearningBtn = document.getElementById('tabLearningBtn');
+const tabSettingsBtn = document.getElementById('tabSettingsBtn');
 const selectPanel = document.getElementById('selectPanel');
 const learningPanel = document.getElementById('learningPanel');
+const settingsPanel = document.getElementById('settingsPanel');
 const selectResultsPanel = document.getElementById('selectResultsPanel');
+const learningDirPath = document.getElementById('learningDirPath');
+const chooseLearningDirBtn = document.getElementById('chooseLearningDirBtn');
+const saveLearningDirBtn = document.getElementById('saveLearningDirBtn');
 const output = document.getElementById('output');
 const summary = document.getElementById('summary');
 const gallery = document.getElementById('gallery');
@@ -404,20 +409,64 @@ async function refreshLearningHistory() {
   }
 }
 
+async function loadLearningDirSetting() {
+  try {
+    const r = await fetch(`${API}/settings`);
+    if (!r.ok) return;
+    const j = await r.json();
+    if (j.learning_data_dir) learningDirPath.value = j.learning_data_dir;
+  } catch (_) {}
+}
+
 function showTab(which) {
   const main = which === 'main';
+  const learning = which === 'learning';
+  const settings = which === 'settings';
+
   selectPanel.style.display = main ? 'block' : 'none';
-  learningPanel.style.display = main ? 'none' : 'block';
+  learningPanel.style.display = learning ? 'block' : 'none';
+  settingsPanel.style.display = settings ? 'block' : 'none';
   selectResultsPanel.style.display = main ? 'grid' : 'none';
   gallery.style.display = main ? 'grid' : 'none';
   loadMoreBtn.parentElement.style.display = main ? 'block' : 'none';
+
   tabMainBtn.classList.toggle('active', main);
-  tabLearningBtn.classList.toggle('active', !main);
-  if (!main) refreshLearningHistory();
+  tabLearningBtn.classList.toggle('active', learning);
+  tabSettingsBtn.classList.toggle('active', settings);
+
+  if (learning) refreshLearningHistory();
+  if (settings) loadLearningDirSetting();
 }
 
 tabMainBtn.addEventListener('click', () => showTab('main'));
 tabLearningBtn.addEventListener('click', () => showTab('learning'));
+tabSettingsBtn.addEventListener('click', () => showTab('settings'));
+
+chooseLearningDirBtn.addEventListener('click', async () => {
+  const res = await window.desktop?.chooseFolder?.();
+  if (res?.ok && res.path) learningDirPath.value = res.path;
+});
+
+saveLearningDirBtn.addEventListener('click', async () => {
+  const p = (learningDirPath.value || '').trim();
+  if (!p) {
+    output.textContent = 'エラー: 保存先フォルダを指定してください';
+    return;
+  }
+  try {
+    const r = await fetch(`${API}/settings/learning-dir`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: p })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const j = await r.json();
+    output.textContent = `学習履歴の保存先を変更しました\n${j.learning_data_dir}`;
+  } catch (e) {
+    output.textContent = `保存先変更エラー: ${e.message}`;
+  }
+});
+
 showTab('main');
 
 async function exportAndMaybeOpenLightroom(jobId, catalogPath) {
