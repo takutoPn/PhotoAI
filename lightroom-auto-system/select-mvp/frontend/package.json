@@ -21,6 +21,16 @@
       "**/*",
       "!dist/**"
     ],
+    "extraResources": [
+      {
+        "from": "../backend/app",
+        "to": "backend/app"
+      },
+      {
+        "from": "../backend/requirements.txt",
+        "to": "backend/requirements.txt"
+      }
+    ],
     "win": {
       "target": [
         "nsis"
