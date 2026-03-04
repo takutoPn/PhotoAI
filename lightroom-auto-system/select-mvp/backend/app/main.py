@@ -32,18 +32,44 @@ results: dict[str, JobResult] = {}
 
 # 学習データはデフォルトで backend 配下。設定で変更可能
 LEARNING_DIR_ENV = "PHOTOAI_LEARNING_DATA_DIR"
+SETTINGS_PATH = Path(__file__).resolve().parents[1] / "settings.json"
 LEARNING_DATA_DIR = Path(os.getenv(LEARNING_DIR_ENV, "") or (Path(__file__).resolve().parents[1] / "learning_data"))
 LEARNING_KEY_ENV = "PHOTOAI_LEARNING_KEY"
 SHARE_URL_ENV = "PHOTOAI_SHARE_URL"
 SHARE_SECRET_ENV = "PHOTOAI_SHARE_SECRET"
 
 
+def _load_settings() -> dict:
+    if not SETTINGS_PATH.exists():
+        return {}
+    try:
+        return json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_settings(d: dict) -> None:
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _effective_learning_dir() -> Path:
+    env_dir = (os.getenv(LEARNING_DIR_ENV, "") or "").strip()
+    if env_dir:
+        return Path(env_dir)
+    st = _load_settings()
+    p = (st.get("learning_data_dir") or "").strip()
+    if p:
+        return Path(p)
+    return Path(__file__).resolve().parents[1] / "learning_data"
+
+
 def _learning_paths() -> tuple[Path, Path, Path]:
-    global LEARNING_DATA_DIR
-    LEARNING_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    data_path = LEARNING_DATA_DIR / "learning_events.enc"
-    index_path = LEARNING_DATA_DIR / "learning_index.jsonl"
-    return LEARNING_DATA_DIR, data_path, index_path
+    d = _effective_learning_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    data_path = d / "learning_events.enc"
+    index_path = d / "learning_index.jsonl"
+    return d, data_path, index_path
 
 
 def _get_learning_key() -> bytes:
@@ -302,17 +328,20 @@ def health():
 @app.get("/settings")
 def get_settings():
     d, _, _ = _learning_paths()
-    return {"ok": True, "learning_data_dir": str(d)}
+    st = _load_settings()
+    return {"ok": True, "learning_data_dir": str(d), "settings_path": str(SETTINGS_PATH), "persisted": st.get("learning_data_dir")}
 
 
 @app.post("/settings/learning-dir")
 def set_learning_dir(payload: LearningDirRequest):
-    global LEARNING_DATA_DIR
     p = Path(payload.path).expanduser().resolve()
     p.mkdir(parents=True, exist_ok=True)
-    LEARNING_DATA_DIR = p
+    st = _load_settings()
+    st["learning_data_dir"] = str(p)
+    _save_settings(st)
+    # 実行中プロセスにも反映
     os.environ[LEARNING_DIR_ENV] = str(p)
-    return {"ok": True, "learning_data_dir": str(LEARNING_DATA_DIR)}
+    return {"ok": True, "learning_data_dir": str(p), "settings_path": str(SETTINGS_PATH)}
 
 
 @app.get("/learning/history")
