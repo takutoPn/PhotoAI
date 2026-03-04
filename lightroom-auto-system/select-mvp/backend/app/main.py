@@ -99,14 +99,25 @@ def _capture_date_range(items: list[dict]) -> str:
     dates = []
     for x in items:
         v = x.get("capture_time")
-        if v is None:
-            continue
-        try:
-            # Lightroom captureTimeはUnix秒のことが多い
-            dt = datetime.fromtimestamp(float(v))
-            dates.append(dt.date())
-        except Exception:
-            continue
+        if v is not None:
+            try:
+                # Lightroom captureTimeはUnix秒のことが多い
+                dt = datetime.fromtimestamp(float(v))
+                dates.append(dt.date())
+                continue
+            except Exception:
+                pass
+
+        # DBに日時が無い場合は実ファイルの更新日時をフォールバック利用
+        p = (x.get("path") or "").strip()
+        if p:
+            try:
+                fp = Path(p)
+                if fp.exists():
+                    dates.append(datetime.fromtimestamp(fp.stat().st_mtime).date())
+            except Exception:
+                pass
+
     if not dates:
         return "-"
     d0 = min(dates)
