@@ -11,6 +11,7 @@ import hashlib
 from datetime import datetime
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+from urllib.error import URLError
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest, LearningDirRequest
 from .selector import run_selection
@@ -239,6 +240,74 @@ def _share_learning_event(event: dict) -> tuple[bool, str]:
         if code < 200 or code >= 300:
             return False, f"http {code}"
     return True, "ok"
+
+
+def _cloud_cache_path() -> Path:
+    d, _, _ = _learning_paths()
+    return d / "cloud_learning_events.jsonl"
+
+
+def _event_fingerprint(event: dict) -> str:
+    return hashlib.sha256(json.dumps(event, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _sync_learning_from_cloud(limit: int = 500) -> tuple[bool, str, int]:
+    share_url = (os.getenv(SHARE_URL_ENV, "") or "").strip()
+    share_secret = (os.getenv(SHARE_SECRET_ENV, "") or "").strip()
+    if not share_url or not share_secret:
+        return False, "share not configured", 0
+    if not _is_tailscale_url(share_url):
+        return False, "share url must be tailscale-only", 0
+
+    export_url = share_url.replace('/learning/import', '/learning/export')
+    req = Request(
+        f"{export_url}?limit={int(limit)}",
+        headers={"X-Shared-Secret": share_secret},
+        method="GET",
+    )
+    try:
+        with urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except URLError as e:
+        return False, f"cloud unreachable: {e}", 0
+    except Exception as e:
+        return False, f"cloud sync failed: {e}", 0
+
+    items = data.get("items") or []
+    if not items:
+        return True, "ok", 0
+
+    cache_path = _cloud_cache_path()
+    known = set()
+    if cache_path.exists():
+        with cache_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                    fp = obj.get("_fp")
+                    if fp:
+                        known.add(fp)
+                except Exception:
+                    continue
+
+    added = 0
+    with cache_path.open("a", encoding="utf-8") as f:
+        for row in items:
+            payload = row.get("payload") if isinstance(row, dict) else None
+            if not isinstance(payload, dict):
+                continue
+            fp = _event_fingerprint(payload)
+            if fp in known:
+                continue
+            known.add(fp)
+            out = {"_fp": fp, "received_at": row.get("received_at"), "payload": payload}
+            f.write(json.dumps(out, ensure_ascii=False) + "\n")
+            added += 1
+
+    return True, "ok", added
 
 
 def _safe_learning_item_from_pick(item):
@@ -491,6 +560,8 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
 
     req = payload or LearnRequest()
 
+    cloud_ok, cloud_msg, cloud_added = _sync_learning_from_cloud(limit=500)
+
     payload = {
         "ts": datetime.utcnow().isoformat() + "Z",
         "source": "job",
@@ -529,6 +600,7 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
         "external_shared": bool(shared_ok),
         "share_message": share_msg,
         "title_id": tid,
+        "cloud_sync": {"ok": cloud_ok, "message": cloud_msg, "added": cloud_added},
     }
 
 
@@ -536,6 +608,7 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
 def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
     catalog_path = payload.catalog_path
     _, out_path, _ = _learning_paths()
+    cloud_ok, cloud_msg, cloud_added = _sync_learning_from_cloud(limit=500)
 
     try:
         items = extract_existing_ratings_for_learning(
@@ -600,4 +673,5 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
         "share_message": share_msg,
         "title_id": tid,
         "source_id": sid,
+        "cloud_sync": {"ok": cloud_ok, "message": cloud_msg, "added": cloud_added},
     }

@@ -17,13 +17,17 @@ def health():
     return {"ok": True}
 
 
-@app.post('/learning/import')
-def learning_import(payload: dict, x_shared_secret: str | None = Header(default=None)):
+def _check_secret(x_shared_secret: str | None) -> None:
     secret = (os.getenv(SECRET_ENV, "") or "").strip()
     if not secret:
         raise HTTPException(status_code=500, detail=f"missing env: {SECRET_ENV}")
     if x_shared_secret != secret:
         raise HTTPException(status_code=401, detail="unauthorized")
+
+
+@app.post('/learning/import')
+def learning_import(payload: dict, x_shared_secret: str | None = Header(default=None)):
+    _check_secret(x_shared_secret)
 
     row = {
         "received_at": datetime.utcnow().isoformat() + "Z",
@@ -32,3 +36,23 @@ def learning_import(payload: dict, x_shared_secret: str | None = Header(default=
     with OUT.open('a', encoding='utf-8') as f:
         f.write(json.dumps(row, ensure_ascii=False) + '\n')
     return {"ok": True}
+
+
+@app.get('/learning/export')
+def learning_export(limit: int = 500, x_shared_secret: str | None = Header(default=None)):
+    _check_secret(x_shared_secret)
+    if not OUT.exists():
+        return {"ok": True, "items": []}
+
+    rows = []
+    with OUT.open('r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except Exception:
+                continue
+    rows = rows[-max(1, min(5000, int(limit))):]
+    return {"ok": True, "items": rows}
