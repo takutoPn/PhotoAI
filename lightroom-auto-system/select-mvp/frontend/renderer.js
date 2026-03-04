@@ -21,6 +21,14 @@ const selectResultsPanel = document.getElementById('selectResultsPanel');
 const learningDirPath = document.getElementById('learningDirPath');
 const chooseLearningDirBtn = document.getElementById('chooseLearningDirBtn');
 const saveLearningDirBtn = document.getElementById('saveLearningDirBtn');
+const defaultTargetPicks = document.getElementById('defaultTargetPicks');
+const defaultMaxPerPerson = document.getElementById('defaultMaxPerPerson');
+const defaultMaxPerCluster = document.getElementById('defaultMaxPerCluster');
+const defaultExportSelected = document.getElementById('defaultExportSelected');
+const defaultExportReserve = document.getElementById('defaultExportReserve');
+const defaultExportReject = document.getElementById('defaultExportReject');
+const defaultShareLearning = document.getElementById('defaultShareLearning');
+const saveDefaultsBtn = document.getElementById('saveDefaultsBtn');
 const output = document.getElementById('output');
 const summary = document.getElementById('summary');
 const gallery = document.getElementById('gallery');
@@ -415,6 +423,38 @@ async function loadLearningDirSetting() {
     if (!r.ok) return;
     const j = await r.json();
     if (j.learning_data_dir) learningDirPath.value = j.learning_data_dir;
+
+    const d = j.defaults || {};
+    if (d.target_picks != null) {
+      defaultTargetPicks.value = String(d.target_picks);
+      document.getElementById('targetPicks').value = String(d.target_picks);
+    }
+    if (d.max_per_person != null) {
+      defaultMaxPerPerson.value = String(d.max_per_person);
+      document.getElementById('maxPerPerson').value = String(d.max_per_person);
+    }
+    if (d.max_per_cluster != null) {
+      defaultMaxPerCluster.value = String(d.max_per_cluster);
+      document.getElementById('maxPerCluster').value = String(d.max_per_cluster);
+    }
+    if (d.export_selected_star != null) {
+      defaultExportSelected.value = String(d.export_selected_star);
+      exportSelectedStar.value = String(d.export_selected_star);
+    }
+    if (d.export_reserve_star != null) {
+      defaultExportReserve.value = String(d.export_reserve_star);
+      exportReserveStar.value = String(d.export_reserve_star);
+    }
+    if (d.export_reject_star != null) {
+      defaultExportReject.value = String(d.export_reject_star);
+      exportRejectStar.value = String(d.export_reject_star);
+    }
+    if (d.share_learning_default != null) {
+      const on = !!d.share_learning_default;
+      defaultShareLearning.checked = on;
+      shareLearningDataMain.checked = on;
+      shareLearningDataHistory.checked = on;
+    }
   } catch (_) {}
 }
 
@@ -467,7 +507,44 @@ saveLearningDirBtn.addEventListener('click', async () => {
   }
 });
 
+saveDefaultsBtn.addEventListener('click', async () => {
+  try {
+    const payload = {
+      target_picks: Number(defaultTargetPicks.value || 30),
+      max_per_person: Number(defaultMaxPerPerson.value || 3),
+      max_per_cluster: Number(defaultMaxPerCluster.value || 1),
+      export_selected_star: Number(defaultExportSelected.value || 3),
+      export_reserve_star: Number(defaultExportReserve.value || 1),
+      export_reject_star: Number(defaultExportReject.value || 0),
+      share_learning_default: !!defaultShareLearning.checked,
+    };
+
+    const r = await fetch(`${API}/settings/defaults`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error(await r.text());
+
+    // 画面にも即反映
+    document.getElementById('targetPicks').value = String(payload.target_picks);
+    document.getElementById('maxPerPerson').value = String(payload.max_per_person);
+    document.getElementById('maxPerCluster').value = String(payload.max_per_cluster);
+    exportSelectedStar.value = String(payload.export_selected_star);
+    exportReserveStar.value = String(payload.export_reserve_star);
+    exportRejectStar.value = String(payload.export_reject_star);
+    shareLearningDataMain.checked = payload.share_learning_default;
+    shareLearningDataHistory.checked = payload.share_learning_default;
+    saveExportMappingPrefs();
+
+    output.textContent = '規定値を保存しました';
+  } catch (e) {
+    output.textContent = `規定値保存エラー: ${e.message}`;
+  }
+});
+
 showTab('main');
+loadLearningDirSetting();
 
 async function exportAndMaybeOpenLightroom(jobId, catalogPath) {
   const mapping = {

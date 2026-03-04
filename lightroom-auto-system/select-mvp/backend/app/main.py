@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest, LearningDirRequest
+from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest, LearningDirRequest, DefaultsSettingsRequest
 from .selector import run_selection
 from .catalog import parse_catalog_assets
 from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning, extract_catalog_date_range
@@ -75,6 +75,18 @@ def _load_settings() -> dict:
 def _save_settings(d: dict) -> None:
     SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
     SETTINGS_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _default_prefs() -> dict:
+    return {
+        "target_picks": 30,
+        "max_per_person": 3,
+        "max_per_cluster": 1,
+        "export_selected_star": 3,
+        "export_reserve_star": 1,
+        "export_reject_star": 0,
+        "share_learning_default": False,
+    }
 
 
 def _effective_learning_dir() -> Path:
@@ -421,7 +433,15 @@ def health():
 def get_settings():
     d, _, _ = _learning_paths()
     st = _load_settings()
-    return {"ok": True, "learning_data_dir": str(d), "settings_path": str(SETTINGS_PATH), "persisted": st.get("learning_data_dir")}
+    prefs = _default_prefs()
+    prefs.update({k: v for k, v in st.items() if k in prefs})
+    return {
+        "ok": True,
+        "learning_data_dir": str(d),
+        "settings_path": str(SETTINGS_PATH),
+        "persisted": st.get("learning_data_dir"),
+        "defaults": prefs,
+    }
 
 
 @app.post("/settings/learning-dir")
@@ -434,6 +454,14 @@ def set_learning_dir(payload: LearningDirRequest):
     # 実行中プロセスにも反映
     os.environ[LEARNING_DIR_ENV] = str(p)
     return {"ok": True, "learning_data_dir": str(p), "settings_path": str(SETTINGS_PATH)}
+
+
+@app.post("/settings/defaults")
+def set_defaults(payload: DefaultsSettingsRequest):
+    st = _load_settings()
+    st.update(payload.model_dump())
+    _save_settings(st)
+    return {"ok": True, "defaults": {**_default_prefs(), **{k: st.get(k) for k in _default_prefs().keys()}}}
 
 
 @app.get("/learning/history")

@@ -71,3 +71,13 @@ class ExportMapping(BaseModel):
 
 class LearningDirRequest(BaseModel):
     path: str
+
+
+class DefaultsSettingsRequest(BaseModel):
+    target_picks: int = Field(default=30, ge=1, le=5000)
+    max_per_person: int = Field(default=3, ge=1, le=30)
+    max_per_cluster: int = Field(default=1, ge=1, le=10)
+    export_selected_star: int = Field(default=3, ge=0, le=5)
+    export_reserve_star: int = Field(default=1, ge=0, le=5)
+    export_reject_star: int = Field(default=0, ge=0, le=5)
+    share_learning_default: bool = False

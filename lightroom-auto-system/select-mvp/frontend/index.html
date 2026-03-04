@@ -134,6 +134,25 @@
           <button id="saveLearningDirBtn" type="button" style="background:#4a8;">保存先を適用</button>
         </div>
         <div class="muted" style="margin-top:6px;">適用後は新規学習データからこの保存先を使用します。</div>
+
+        <h3 style="margin-top:14px;">規定値（デフォルト）</h3>
+        <div class="row">
+          <div><label>最終セレクト枚数</label><input id="defaultTargetPicks" type="number" min="1" /></div>
+          <div><label>1人あたり上限</label><input id="defaultMaxPerPerson" type="number" min="1" /></div>
+          <div><label>1クラスタ上限</label><input id="defaultMaxPerCluster" type="number" min="1" /></div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <div><label>書き出し セレクト済み</label><input id="defaultExportSelected" type="number" min="0" max="5" /></div>
+          <div><label>書き出し 次点</label><input id="defaultExportReserve" type="number" min="0" max="5" /></div>
+          <div><label>書き出し 非採用</label><input id="defaultExportReject" type="number" min="0" max="5" /></div>
+        </div>
+        <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-top:10px;">
+          <input id="defaultShareLearning" type="checkbox" style="width:auto; margin:0;" />
+          任意 学習データを共有する（デフォルト）
+        </label>
+        <div style="margin-top:10px;">
+          <button id="saveDefaultsBtn" type="button" style="background:#835;">規定値を保存</button>
+        </div>
       </div>
     </div>
 
