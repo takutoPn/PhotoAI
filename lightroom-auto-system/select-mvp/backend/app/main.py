@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from .schemas import Job, JobCreate, JobResult, StarUpdateRequest, ImportCatalogLearningRequest, ExportMapping, LearnRequest
 from .selector import run_selection
 from .catalog import parse_catalog_assets
-from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning
+from .lightroom_write import export_ratings_to_catalog, extract_existing_ratings_for_learning, extract_catalog_date_range
 
 app = FastAPI(title="Selectra AI API", version="0.1.0")
 
@@ -434,6 +434,7 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
             min_rating=payload.min_rating,
             limit=payload.limit,
         )
+        dmin, dmax = extract_catalog_date_range(catalog_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"import failed: {e}")
 
@@ -458,12 +459,17 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
 
     try:
         _append_encrypted_event(out_path, event)
+        if dmin and dmax:
+            capture_date = dmin if dmin == dmax else f"{dmin}～{dmax}"
+        else:
+            capture_date = _capture_date_range(items)
+
         _upsert_learning_index({
             "source_id": sid,
             "title": source_title,
             "title_id": tid,
             "uploaded_at": event["ts"],
-            "capture_date": _capture_date_range(items),
+            "capture_date": capture_date,
             "rating_summary": _rating_summary(items),
             "count": len(items),
             "source": "historical-import",

@@ -371,7 +371,7 @@ async function refreshLearningHistory() {
     const data = await res.json();
     const items = data.items || [];
     if (!items.length) {
-      learningHistoryBody.innerHTML = '<tr><td colspan="5" class="muted">まだ履歴がありません</td></tr>';
+      learningHistoryBody.innerHTML = '<tr><td colspan="6" class="muted">まだ履歴がありません</td></tr>';
       return;
     }
     learningHistoryBody.innerHTML = items.map((x, idx) => `
@@ -379,7 +379,8 @@ async function refreshLearningHistory() {
         <td>${idx + 1}</td>
         <td>${x.title || x.title_id || '-'}</td>
         <td>${formatDateTime(x.uploaded_at)}</td>
-        <td>${x.capture_date || '-'}<br/><span class="muted">${x.rating_summary || '-'}</span></td>
+        <td>${x.capture_date || '-'}</td>
+        <td><span class="muted">${x.rating_summary || '-'}</span></td>
         <td><button class="delete-history" data-source-id="${x.source_id || ''}" style="background:#933;">削除</button></td>
       </tr>
     `).join('');
@@ -397,9 +398,9 @@ async function refreshLearningHistory() {
   } catch (e) {
     const msg = String(e.message || e);
     if (msg.includes('Not Found')) {
-      learningHistoryBody.innerHTML = `<tr><td colspan="5">履歴取得エラー: backendが古い可能性があります（/learning/history 未反映）</td></tr>`;
+      learningHistoryBody.innerHTML = `<tr><td colspan="6">履歴取得エラー: backendが古い可能性があります（/learning/history 未反映）</td></tr>`;
     } else {
-      learningHistoryBody.innerHTML = `<tr><td colspan="5">履歴取得エラー: ${msg}</td></tr>`;
+      learningHistoryBody.innerHTML = `<tr><td colspan="6">履歴取得エラー: ${msg}</td></tr>`;
     }
   }
 }

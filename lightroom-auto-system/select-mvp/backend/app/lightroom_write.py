@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 from typing import Iterable
+from datetime import datetime
 
 from .schemas import SelectionItem
 
@@ -61,6 +62,29 @@ def extract_existing_ratings_for_learning(catalog_path: str, min_rating: int = 1
                 "capture_time": capture_time,
             })
         return out
+    finally:
+        conn.close()
+
+
+def extract_catalog_date_range(catalog_path: str) -> tuple[str | None, str | None]:
+    cpath = Path(catalog_path)
+    if not cpath.exists() or cpath.suffix.lower() != ".lrcat":
+        raise FileNotFoundError(f"catalog not found: {catalog_path}")
+
+    conn = sqlite3.connect(str(cpath))
+    conn.execute("PRAGMA busy_timeout = 60000")
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT MIN(captureTime), MAX(captureTime) FROM Adobe_images WHERE captureTime IS NOT NULL")
+        mn, mx = cur.fetchone()
+        def _fmt(v):
+            if v is None:
+                return None
+            try:
+                return datetime.fromtimestamp(float(v)).strftime("%Y/%m/%d")
+            except Exception:
+                return None
+        return _fmt(mn), _fmt(mx)
     finally:
         conn.close()
 
