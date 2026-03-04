@@ -71,20 +71,51 @@ def extract_catalog_date_range(catalog_path: str) -> tuple[str | None, str | Non
     if not cpath.exists() or cpath.suffix.lower() != ".lrcat":
         raise FileNotFoundError(f"catalog not found: {catalog_path}")
 
+    def _fmt_epoch(v):
+        if v is None:
+            return None
+        try:
+            return datetime.fromtimestamp(float(v)).strftime("%Y/%m/%d")
+        except Exception:
+            return None
+
+    def _fmt_text(v):
+        if not v:
+            return None
+        s = str(v).strip().replace("T", " ")
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y/%m/%d %H:%M:%S", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(s[:19], fmt).strftime("%Y/%m/%d")
+            except Exception:
+                continue
+        return None
+
     conn = sqlite3.connect(str(cpath))
     conn.execute("PRAGMA busy_timeout = 60000")
     try:
         cur = conn.cursor()
-        cur.execute("SELECT MIN(captureTime), MAX(captureTime) FROM Adobe_images WHERE captureTime IS NOT NULL")
-        mn, mx = cur.fetchone()
-        def _fmt(v):
-            if v is None:
-                return None
-            try:
-                return datetime.fromtimestamp(float(v)).strftime("%Y/%m/%d")
-            except Exception:
-                return None
-        return _fmt(mn), _fmt(mx)
+
+        # 1) まず Adobe_images.captureTime (epoch秒) を試す
+        try:
+            cur.execute("SELECT MIN(captureTime), MAX(captureTime) FROM Adobe_images WHERE captureTime IS NOT NULL")
+            mn, mx = cur.fetchone()
+            a, b = _fmt_epoch(mn), _fmt_epoch(mx)
+            if a and b:
+                return a, b
+        except Exception:
+            pass
+
+        # 2) Lightroom schema差分向け: AgHarvestedExifMetadata.dateTimeOriginal (文字列日時)
+        try:
+            cur.execute("SELECT MIN(dateTimeOriginal), MAX(dateTimeOriginal) FROM AgHarvestedExifMetadata WHERE dateTimeOriginal IS NOT NULL")
+            mn, mx = cur.fetchone()
+            a, b = _fmt_text(mn), _fmt_text(mx)
+            if a and b:
+                return a, b
+        except Exception:
+            pass
+
+        return None, None
     finally:
         conn.close()
 
