@@ -34,6 +34,7 @@ results: dict[str, JobResult] = {}
 # 学習データはデフォルトで backend 配下。設定で変更可能
 LEARNING_DIR_ENV = "PHOTOAI_LEARNING_DATA_DIR"
 CONFIG_DIR_ENV = "PHOTOAI_CONFIG_DIR"
+CURRENT_LEARNING_DIR: Path | None = None
 
 
 def _default_config_dir() -> Path:
@@ -90,13 +91,20 @@ def _default_prefs() -> dict:
 
 
 def _effective_learning_dir() -> Path:
-    env_dir = (os.getenv(LEARNING_DIR_ENV, "") or "").strip()
-    if env_dir:
-        return Path(env_dir)
+    # 優先順位: 実行中の明示設定 > 設定ファイル > 環境変数 > 既定値
+    global CURRENT_LEARNING_DIR
+    if CURRENT_LEARNING_DIR is not None:
+        return CURRENT_LEARNING_DIR
+
     st = _load_settings()
     p = (st.get("learning_data_dir") or "").strip()
     if p:
         return Path(p)
+
+    env_dir = (os.getenv(LEARNING_DIR_ENV, "") or "").strip()
+    if env_dir:
+        return Path(env_dir)
+
     return Path(__file__).resolve().parents[1] / "learning_data"
 
 
@@ -446,12 +454,14 @@ def get_settings():
 
 @app.post("/settings/learning-dir")
 def set_learning_dir(payload: LearningDirRequest):
+    global CURRENT_LEARNING_DIR
     p = Path(payload.path).expanduser().resolve()
     p.mkdir(parents=True, exist_ok=True)
     st = _load_settings()
     st["learning_data_dir"] = str(p)
     _save_settings(st)
     # 実行中プロセスにも反映
+    CURRENT_LEARNING_DIR = p
     os.environ[LEARNING_DIR_ENV] = str(p)
     return {"ok": True, "learning_data_dir": str(p), "settings_path": str(SETTINGS_PATH)}
 
@@ -635,12 +645,16 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
             "count": len(result.picks),
             "source": "job",
         })
-        shared_ok = False
-        share_msg = "disabled"
-        if req.share_learning:
-            shared_ok, share_msg = _share_learning_event(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"learn save failed: {e}")
+
+    shared_ok = False
+    share_msg = "disabled"
+    if req.share_learning:
+        try:
+            shared_ok, share_msg = _share_learning_event(payload)
+        except Exception as e:
+            shared_ok, share_msg = False, f"share failed: {e}"
 
     return {
         "ok": True,
@@ -707,12 +721,16 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
             "count": len(items),
             "source": "historical-import",
         })
-        shared_ok = False
-        share_msg = "disabled"
-        if payload.share_learning:
-            shared_ok, share_msg = _share_learning_event(event)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"import save failed: {e}")
+
+    shared_ok = False
+    share_msg = "disabled"
+    if payload.share_learning:
+        try:
+            shared_ok, share_msg = _share_learning_event(event)
+        except Exception as e:
+            shared_ok, share_msg = False, f"share failed: {e}"
 
     return {
         "ok": True,
