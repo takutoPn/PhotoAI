@@ -83,6 +83,39 @@ def _source_id(catalog_path: str, title_or_name: str) -> str:
     return hashlib.sha256(base.encode("utf-8")).hexdigest()[:16]
 
 
+def _rating_summary(items: list[dict]) -> str:
+    counts = {i: 0 for i in range(6)}
+    for x in items:
+        r = int(x.get("rating") or 0)
+        if r < 0:
+            r = 0
+        if r > 5:
+            r = 5
+        counts[r] += 1
+    return " ".join([f"★{k} {counts[k]}枚" for k in [5, 4, 3, 2, 1, 0]])
+
+
+def _capture_date_range(items: list[dict]) -> str:
+    dates = []
+    for x in items:
+        v = x.get("capture_time")
+        if v is None:
+            continue
+        try:
+            # Lightroom captureTimeはUnix秒のことが多い
+            dt = datetime.fromtimestamp(float(v))
+            dates.append(dt.date())
+        except Exception:
+            continue
+    if not dates:
+        return "-"
+    d0 = min(dates)
+    d1 = max(dates)
+    if d0 == d1:
+        return d0.strftime("%Y/%m/%d")
+    return f"{d0.strftime('%Y/%m/%d')}～{d1.strftime('%Y/%m/%d')}"
+
+
 def _append_learning_index(entry: dict):
     with LEARNING_INDEX_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -360,6 +393,7 @@ def learn_from_job(job_id: str, payload: LearnRequest | None = None):
             "title_id": tid,
             "uploaded_at": payload["ts"],
             "capture_date": "-",
+            "rating_summary": "-",
             "count": len(result.picks),
             "source": "job",
         })
@@ -417,7 +451,8 @@ def import_learning_from_catalog(payload: ImportCatalogLearningRequest):
             "source_id": sid,
             "title_id": tid,
             "uploaded_at": event["ts"],
-            "capture_date": "-",
+            "capture_date": _capture_date_range(items),
+            "rating_summary": _rating_summary(items),
             "count": len(items),
             "source": "historical-import",
         })

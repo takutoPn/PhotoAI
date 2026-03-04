@@ -40,7 +40,8 @@ def extract_existing_ratings_for_learning(catalog_path: str, min_rating: int = 1
             SELECT
               COALESCE(rr.absolutePath, '') || COALESCE(af.pathFromRoot, '') || f.baseName || '.' || f.extension AS full_path,
               COALESCE(ai.rating, 0) AS rating,
-              COALESCE(ai.pick, 0) AS pick
+              COALESCE(ai.pick, 0) AS pick,
+              ai.captureTime AS capture_time
             FROM Adobe_images ai
             JOIN AgLibraryFile f ON ai.rootFile = f.id_local
             LEFT JOIN AgLibraryFolder af ON f.folder = af.id_local
@@ -52,11 +53,12 @@ def extract_existing_ratings_for_learning(catalog_path: str, min_rating: int = 1
         )
         rows = cur.fetchall()
         out = []
-        for full_path, rating, pick in rows:
+        for full_path, rating, pick, capture_time in rows:
             out.append({
                 "path": str(Path(full_path)) if full_path else "",
                 "rating": int(rating or 0),
                 "pick": int(pick or 0),
+                "capture_time": capture_time,
             })
         return out
     finally:

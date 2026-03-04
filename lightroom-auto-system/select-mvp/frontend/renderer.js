@@ -347,7 +347,13 @@ function formatDateTime(iso) {
   if (!iso) return '-';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return String(iso);
-  return d.toLocaleString('ja-JP');
+  const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${y}/${m}/${day}(${w}) ${hh}:${mm}`;
 }
 
 async function refreshLearningHistory() {
@@ -365,7 +371,7 @@ async function refreshLearningHistory() {
         <td>${idx + 1}</td>
         <td>${x.title_id || '-'}</td>
         <td>${formatDateTime(x.uploaded_at)}</td>
-        <td>${x.capture_date || '-'}</td>
+        <td>${x.capture_date || '-'}<br/><span class="muted">${x.rating_summary || '-'}</span></td>
       </tr>
     `).join('');
   } catch (e) {
@@ -467,7 +473,7 @@ importHistoryBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         catalog_path: catalogPath,
-        min_rating: 1,
+        min_rating: 0,
         limit: 50000,
         share_learning: !!shareLearningDataHistory?.checked,
         learning_title: learningTitleInput?.value?.trim() || null

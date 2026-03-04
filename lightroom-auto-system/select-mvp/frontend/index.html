@@ -20,9 +20,12 @@
       .top-tab { background:#2a2a2a; border:1px solid #444; border-bottom:none; color:#ddd; padding:8px 14px; cursor:pointer; }
       .top-tab + .top-tab { border-left:none; }
       .top-tab.active { background:#4a8; color:#fff; }
-      .history-table { width:100%; border-collapse: collapse; margin-top:8px; }
+      .history-table { width:100%; border-collapse: collapse; margin-top:8px; table-layout: fixed; }
       .history-table th, .history-table td { border:1px solid #333; padding:6px 8px; font-size:12px; }
       .history-table th { background:#1f1f1f; }
+      .col-no { width: 5ch; }
+      .col-upload { width: 18ch; }
+      .col-capture { width: 24ch; }
       #gallery { display: grid; gap: 10px; }
       .item { border: 1px solid #2e2e2e; border-radius: 8px; overflow: hidden; background: #181818; }
       .item img { width: 100%; display: block; background: #000; max-height: 280px; object-fit: cover; }
@@ -114,7 +117,7 @@
 
           <h3 style="margin-top:14px;">記録した学習取り込み履歴</h3>
           <table class="history-table">
-            <thead><tr><th>No</th><th>タイトル(ID)</th><th>アップロード日付</th><th>撮影日</th></tr></thead>
+            <thead><tr><th class="col-no">No</th><th>タイトル(ID)</th><th class="col-upload">アップロード日付</th><th class="col-capture">撮影日 / レート内訳</th></tr></thead>
             <tbody id="learningHistoryBody"><tr><td colspan="4" class="muted">まだ履歴がありません</td></tr></tbody>
           </table>
       </div>
