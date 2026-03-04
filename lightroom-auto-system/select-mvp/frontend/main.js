@@ -52,9 +52,17 @@ function resolveBackendDir() {
 }
 
 function resolveBackendExe(backendDir) {
-  if (!backendDir) return null;
-  const exe = path.join(backendDir, 'selectra-backend.exe');
-  return fs.existsSync(exe) ? exe : null;
+  const candidates = [];
+  if (backendDir) candidates.push(path.join(backendDir, 'selectra-backend.exe'));
+  candidates.push(path.join(process.resourcesPath || '', 'backend', 'selectra-backend.exe'));
+  candidates.push(path.resolve(__dirname, '..', 'backend', 'dist', 'selectra-backend.exe'));
+
+  for (const p of candidates) {
+    try {
+      if (p && fs.existsSync(p)) return p;
+    } catch (_) {}
+  }
+  return null;
 }
 
 function getPythonCandidates() {
@@ -156,8 +164,9 @@ async function ensureBackend() {
 
   const backendExe = resolveBackendExe(backendDir);
   if (backendExe) {
+    const exeCwd = path.dirname(backendExe);
     backendProc = spawn(backendExe, [], {
-      cwd: backendDir,
+      cwd: exeCwd,
       env,
       windowsHide: true,
       stdio: 'ignore',
@@ -186,7 +195,11 @@ async function ensureBackend() {
 
   const ok = await waitHealth(15000);
   if (!ok) {
-    dialog.showErrorBox('Selectra AI', 'バックエンド起動に失敗しました。Python(3.12+) のインストールを確認してください。');
+    if (backendExe) {
+      dialog.showErrorBox('Selectra AI', `同梱バックエンドの起動に失敗しました。\nexe: ${backendExe}`);
+    } else {
+      dialog.showErrorBox('Selectra AI', 'バックエンド起動に失敗しました。Python(3.12+) のインストールを確認してください。');
+    }
   }
   return ok;
 }
