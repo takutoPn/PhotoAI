@@ -142,9 +142,24 @@
           <div><label>1クラスタ上限</label><input id="defaultMaxPerCluster" type="number" min="1" /></div>
         </div>
         <div class="row" style="margin-top:8px;">
-          <div><label>書き出し セレクト済み</label><input id="defaultExportSelected" type="number" min="0" max="5" /></div>
-          <div><label>書き出し 次点</label><input id="defaultExportReserve" type="number" min="0" max="5" /></div>
-          <div><label>書き出し 非採用</label><input id="defaultExportReject" type="number" min="0" max="5" /></div>
+          <div>
+            <label>書き出し セレクト済み</label>
+            <select id="defaultExportSelected">
+              <option value="5">★5</option><option value="4">★4</option><option value="3">★3</option><option value="2">★2</option><option value="1">★1</option><option value="0">★0</option>
+            </select>
+          </div>
+          <div>
+            <label>書き出し 次点</label>
+            <select id="defaultExportReserve">
+              <option value="5">★5</option><option value="4">★4</option><option value="3">★3</option><option value="2">★2</option><option value="1">★1</option><option value="0">★0</option>
+            </select>
+          </div>
+          <div>
+            <label>書き出し 非採用</label>
+            <select id="defaultExportReject">
+              <option value="5">★5</option><option value="4">★4</option><option value="3">★3</option><option value="2">★2</option><option value="1">★1</option><option value="0">★0</option>
+            </select>
+          </div>
         </div>
         <label style="display:flex; align-items:center; gap:6px; color:#ddd; margin-top:10px;">
           <input id="defaultShareLearning" type="checkbox" style="width:auto; margin:0;" />
