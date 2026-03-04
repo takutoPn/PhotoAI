@@ -63,6 +63,8 @@ npm run dist:mac
 出力: `frontend/dist/*.dmg`
 （内部で backend の mac-arm64 バイナリも自動ビルドして同梱）
 
+詳細マニュアル: `MAC_BUILD_MANUAL.md`
+
 ## 2) Frontend 起動
 
 ```bash
